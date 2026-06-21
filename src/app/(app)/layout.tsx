@@ -67,6 +67,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {profile.role !== "vendor" ? <Link href="/requests/new" title="Request Baru">＋</Link> : null}
         {profile.role !== "vendor" ? <Link href="/reports/daily" title="Report Harian">▣</Link> : null}
         {profile.role !== "vendor" ? <Link href="/reports/spices" title="Report Bumbu">◐</Link> : null}
+        {profile.role !== "vendor" ? <Link href="/reports/sales" title="Report Sales">Rp</Link> : null}
         {profile.role === "admin" ? <Link href="/admin/master" title="Master Data">⚙</Link> : null}
         {profile.role === "vendor" ? <Link href="/vendor" title="Vendor">✓</Link> : null}
         <form action={signOut} className="sidebar-bottom">

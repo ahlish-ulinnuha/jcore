@@ -9,6 +9,7 @@ const links: Array<{ href: string; label: string; roles: Role[] }> = [
   { href: "/requests/new", label: "Request Baru", roles: ["admin", "staff"] },
   { href: "/reports/daily", label: "Report Harian", roles: ["admin", "staff"] },
   { href: "/reports/spices", label: "Report Bumbu", roles: ["admin", "staff"] },
+  { href: "/reports/sales", label: "Report Sales", roles: ["admin", "staff"] },
   { href: "/vendor", label: "Vendor", roles: ["vendor"] },
 ];
 

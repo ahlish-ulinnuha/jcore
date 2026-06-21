@@ -93,6 +93,36 @@ export type DailySpiceReport = {
   updated_at: string;
 };
 
+export type DailySalesReport = {
+  id: string;
+  report_date: string;
+  store_id: string;
+  store_name: string;
+  system_nominal: number;
+  cash_total: number;
+  cash_100000: number;
+  cash_50000: number;
+  cash_20000: number;
+  cash_10000: number;
+  cash_5000: number;
+  cash_2000: number;
+  cash_1000: number;
+  cash_500: number;
+  cash_200: number;
+  cash_100: number;
+  qris: number;
+  debit: number;
+  shopee: number;
+  expense: number;
+  expense_detail: string | null;
+  difference: number;
+  notes: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ActivityLog = {
   id: string;
   entity_type: string;
