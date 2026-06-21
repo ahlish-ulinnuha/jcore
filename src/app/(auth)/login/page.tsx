@@ -57,7 +57,7 @@ export default function LoginPage() {
         <section className="login-box panel">
           <p className="eyebrow">One Dashboard System</p>
           <h2>Masuk ke JCore</h2>
-          <p className="muted">Kelola management operasional toko dengan flow yang lebih santai</p>
+          <p className="muted"></p>
 
           <form className="form" onSubmit={onSubmit}>
             {error ? <div className="alert">{error}</div> : null}

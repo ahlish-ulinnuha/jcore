@@ -4,6 +4,27 @@ import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
 import type { Profile, PurchaseRequest, PurchaseRequestItem } from "@/lib/types";
 
+type ItemWithRequest = PurchaseRequestItem & {
+  purchase_requests?: {
+    batch_no?: number;
+    request_date?: string;
+    request_no?: string;
+    status?: PurchaseRequest["status"];
+    store_id?: string | null;
+    store_name?: string;
+  };
+};
+
+type DashboardReportRow = {
+  batchNo: number;
+  productId: string;
+  productName: string;
+  qty: number;
+  status: PurchaseRequestItem["status"];
+  vendorId: string;
+  vendorName: string;
+};
+
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jakarta",
@@ -11,6 +32,12 @@ function todayJakarta() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+function displayDate(value: string) {
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}-${month}-${year}`;
 }
 
 function statusLabel(status: PurchaseRequestItem["status"]) {
@@ -49,7 +76,7 @@ export default async function DashboardPage() {
   const requestsQuery = supabase.from("purchase_requests").select("*").eq("request_date", today).order("created_at", { ascending: false });
   const itemsQuery = supabase
       .from("purchase_request_items")
-      .select("*, products(*, brands(*)), vendors(*), purchase_requests!inner(request_date, status, store_id)")
+      .select("*, products(*, brands(*)), vendors(*), purchase_requests!inner(request_date, request_no, batch_no, status, store_id, store_name)")
       .eq("purchase_requests.request_date", today)
       .eq("purchase_requests.status", "submitted")
       .order("created_at", { ascending: false });
@@ -70,13 +97,54 @@ export default async function DashboardPage() {
   const [{ count: requestCount }, { data: requests }, { data: items }, { count: unavailableCount }] = await Promise.all([
     requestCountQuery,
     requestsQuery.returns<PurchaseRequest[]>(),
-    itemsQuery.returns<PurchaseRequestItem[]>(),
+    itemsQuery.returns<ItemWithRequest[]>(),
     unavailableQuery,
   ]);
 
   const itemRows = items ?? [];
   const requestRows = requests ?? [];
   const vendorCount = new Set(itemRows.map((item) => item.vendor_id)).size;
+  const requestByBatch = requestRows.reduce<Record<string, PurchaseRequest>>((acc, request) => {
+    acc[String(request.batch_no)] ??= request;
+    return acc;
+  }, {});
+  const reportRows = Object.values(
+    itemRows.reduce<Record<string, DashboardReportRow>>((acc, item) => {
+      const batchNo = item.purchase_requests?.batch_no ?? 0;
+      const vendorId = item.vendor_id ?? "unknown";
+      const productId = item.product_id ?? "unknown";
+      const key = [batchNo, vendorId, productId, item.status].join("|");
+      acc[key] ??= {
+        batchNo,
+        productId,
+        productName: productDisplayName(item.products),
+        qty: 0,
+        status: item.status,
+        vendorId,
+        vendorName: item.vendors?.name ?? "Tanpa vendor",
+      };
+      acc[key].qty += Number(item.qty);
+      return acc;
+    }, {}),
+  ).sort((a, b) => b.batchNo - a.batchNo || a.vendorName.localeCompare(b.vendorName) || a.productName.localeCompare(b.productName));
+  const batchVendorGroups = Object.entries(
+    reportRows.reduce<Record<string, DashboardReportRow[]>>((acc, row) => {
+      acc[String(row.batchNo)] ??= [];
+      acc[String(row.batchNo)].push(row);
+      return acc;
+    }, {}),
+  )
+    .sort(([batchA], [batchB]) => Number(batchB) - Number(batchA))
+    .map(([batchNo, batchRows]) => {
+      const vendors = Object.values(
+        batchRows.reduce<Record<string, { vendorId: string; vendorName: string; rows: DashboardReportRow[] }>>((acc, row) => {
+          acc[row.vendorId] ??= { vendorId: row.vendorId, vendorName: row.vendorName, rows: [] };
+          acc[row.vendorId].rows.push(row);
+          return acc;
+        }, {}),
+      ).sort((a, b) => a.vendorName.localeCompare(b.vendorName));
+      return { batchNo, vendors };
+    });
   const groupedItems = Object.values(
     itemRows.reduce<Record<string, { vendorId: string; vendorName: string; rows: PurchaseRequestItem[] }>>((acc, item) => {
       const vendorId = item.vendor_id ?? "unknown";
@@ -113,42 +181,51 @@ export default async function DashboardPage() {
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>
-        <h2>Request hari ini</h2>
-        <div className="table-wrap compact-mobile-wrap">
-          <table className="compact-mobile-table">
-            <thead>
-              <tr>
-                <th>No Request</th>
-                <th>Store</th>
-                <th>Batch</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requestRows.map((request) => (
-                <tr key={request.id}>
-                  <td>{request.request_no}</td>
-                  <td>{request.store_name}</td>
-                  <td>Batch {request.batch_no}</td>
-                  <td>
-                    <span className={`badge ${request.status}`}>{request.status}</span>
-                  </td>
-                  <td>
-                    <Link className="button" href={`/requests/${request.id}/edit`}>
-                      {request.status === "draft" ? "Edit Draft" : "Lihat"}
+        <h2>Detail request per batch</h2>
+        {batchVendorGroups.length ? (
+          batchVendorGroups.map((batchGroup) => {
+            const request = requestByBatch[batchGroup.batchNo];
+            return (
+              <section className="daily-report-group dashboard-batch-group" key={batchGroup.batchNo}>
+                <div className="batch-title-row">
+                  <h3>
+                    Batch {batchGroup.batchNo} <span className="muted">- {displayDate(today)}</span>
+                  </h3>
+                  {request ? (
+                    <Link className="button outline" href={`/requests/${request.id}/edit`}>
+                      Lihat
                     </Link>
-                  </td>
-                </tr>
-              ))}
-              {requestRows.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>Belum ada request hari ini.</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+                  ) : null}
+                </div>
+                <div className="vendor-report-list">
+                  {batchGroup.vendors.map((vendor) => (
+                    <section className="vendor-report-group" key={`${batchGroup.batchNo}-${vendor.vendorId}`}>
+                      <h3>{vendor.vendorName}</h3>
+                      <div className="report-item-list">
+                        {vendor.rows.map((row) => (
+                          <div className="report-item-row" key={`${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`}>
+                            <span className="report-item-product">{row.productName}</span>
+                            <span className="report-item-qty">{row.qty}</span>
+                            <span
+                              aria-label={statusLabel(row.status)}
+                              className={`status-icon ${row.status}`}
+                              data-tooltip={statusLabel(row.status)}
+                              tabIndex={0}
+                            >
+                              {statusIcon(row.status)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </section>
+            );
+          })
+        ) : (
+          <p className="muted">Belum ada request hari ini.</p>
+        )}
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>

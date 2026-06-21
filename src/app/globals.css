@@ -808,6 +808,34 @@ th {
   margin-bottom: 16px;
 }
 
+.dashboard-batch-group {
+  background: #fffafa;
+  border: 1px solid #efe7e6;
+  border-radius: 16px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.batch-title-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.batch-title-row h3 {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.batch-title-row .button {
+  min-height: 34px;
+  padding: 7px 13px;
+}
+
 .vendor-report-list {
   display: grid;
   gap: 14px;
@@ -1033,7 +1061,7 @@ th {
   color: #fff;
   display: inline-flex;
   font-family: "Trebuchet MS", "Avenir Next", Inter, sans-serif;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 900;
   justify-content: center;
   letter-spacing: 0;
@@ -1699,7 +1727,7 @@ th {
   }
 
   .login-hero h1 {
-    font-size: 40px;
+    font-size: 30px;
   }
 
   .login-hero p {
@@ -1727,6 +1755,24 @@ th {
 
   .daily-report-group {
     margin-bottom: 12px;
+  }
+
+  .dashboard-batch-group {
+    padding: 10px;
+  }
+
+  .batch-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .batch-title-row h3 {
+    font-size: 16px;
+  }
+
+  .batch-title-row .button {
+    width: 100%;
   }
 
   .vendor-report-list {
