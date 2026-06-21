@@ -79,3 +79,23 @@ export async function saveDailySalesReport(formData: FormData) {
   revalidatePath("/reports/sales");
   redirect(`/reports/sales?date=${reportDate}&store=${store.id}&saved=1`);
 }
+
+export async function deleteDailySalesReport(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
+  if (!profile || profile.role !== "admin") redirect("/dashboard");
+
+  const id = text(formData, "id");
+  const redirectTo = text(formData, "redirect_to") || "/reports/sales";
+  if (id) {
+    await supabase.from("daily_sales_reports").delete().eq("id", id);
+  }
+
+  revalidatePath("/reports/sales");
+  redirect(`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}deleted=1`);
+}

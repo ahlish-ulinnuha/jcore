@@ -58,3 +58,24 @@ export async function saveDailySpiceReport(formData: FormData) {
   revalidatePath("/reports/daily");
   redirect(`/reports/spices?date=${reportDate}&store=${store.id}&saved=1`);
 }
+
+export async function deleteDailySpiceReport(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
+  if (!profile || profile.role !== "admin") redirect("/dashboard");
+
+  const id = text(formData, "id");
+  const redirectTo = text(formData, "redirect_to") || "/reports/spices";
+  if (id) {
+    await supabase.from("daily_spice_reports").delete().eq("id", id);
+  }
+
+  revalidatePath("/reports/spices");
+  revalidatePath("/reports/daily");
+  redirect(`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}deleted=1`);
+}

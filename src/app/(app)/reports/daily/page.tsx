@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
@@ -249,6 +250,9 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
           <button className="button primary" type="submit">
             Tampilkan
           </button>
+          <Link className="button outline" href="/reports/daily">
+            Reset
+          </Link>
         </form>
         <div className="filter-actions">
           <CopySummaryButton

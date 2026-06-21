@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,15 @@ async function requireAdmin() {
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+async function redirectWithToast(message: string, tone: "draft" | "submit" | "delete" = "submit") {
+  const headerList = await headers();
+  const referer = headerList.get("referer") ?? "/admin/master";
+  const url = new URL(referer, "http://localhost");
+  url.searchParams.set("toast", message);
+  url.searchParams.set("tone", tone);
+  redirect(`${url.pathname}?${url.searchParams.toString()}`);
 }
 
 export async function createStore(formData: FormData) {
@@ -83,6 +93,7 @@ export async function createProduct(formData: FormData) {
     unit: text(formData, "unit") || "pcs",
   });
   revalidatePath("/admin/master");
+  await redirectWithToast("Barang berhasil ditambahkan.", "submit");
 }
 
 export async function updateProduct(formData: FormData) {
@@ -159,6 +170,7 @@ export async function createProductVendor(formData: FormData) {
       { onConflict: "product_id,vendor_id" },
     );
   revalidatePath("/admin/master");
+  await redirectWithToast("Mapping vendor berhasil disimpan.", "submit");
 }
 
 export async function updateProductVendor(formData: FormData) {

@@ -131,6 +131,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
           <button className="button primary" type="submit">
             Tampilkan
           </button>
+          <Link className="button outline" href="/dashboard">
+            Reset
+          </Link>
         </form>
         <div className="table-wrap compact-mobile-wrap">
           <table className="compact-mobile-table">

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ActivityLog, Product, Profile, PurchaseRequest, PurchaseRequestItem, Vendor } from "@/lib/types";
 import { NewRequestForm } from "../../new/NewRequestForm";
+import { deletePurchaseRequest } from "../../actions";
 
 type Params = Promise<{ id: string }>;
 
@@ -42,6 +43,14 @@ export default async function EditRequestPage({ params }: { params: Params }) {
           </h1>
           <p className="muted">Draft bisa diedit. Request yang sudah submitted dikunci agar vendor menerima data final.</p>
         </div>
+        {profile.role === "admin" ? (
+          <form action={deletePurchaseRequest}>
+            <input name="id" type="hidden" value={request.id} />
+            <button className="button danger" type="submit">
+              Hapus Request
+            </button>
+          </form>
+        ) : null}
       </div>
 
       {products?.length && vendors?.length ? (

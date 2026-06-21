@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { DailySpiceReport, Profile, Store } from "@/lib/types";
-import { saveDailySpiceReport } from "./actions";
+import { deleteDailySpiceReport, saveDailySpiceReport } from "./actions";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -15,6 +16,7 @@ function todayJakarta() {
 type SearchParams = Promise<{
   date?: string;
   error?: string;
+  deleted?: string;
   history_date?: string;
   history_store?: string;
   page?: string;
@@ -88,6 +90,12 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
   previousParams.set("page", String(Math.max(1, currentPage - 1)));
   const nextParams = new URLSearchParams(historyParams);
   nextParams.set("page", String(Math.min(totalPages, currentPage + 1)));
+  const currentParams = new URLSearchParams(historyParams);
+  currentParams.set("page", String(currentPage));
+  const currentPath = `/reports/spices?${currentParams}`;
+  const resetHistoryParams = new URLSearchParams();
+  resetHistoryParams.set("date", reportDate);
+  resetHistoryParams.set("store", selectedStoreId);
 
   return (
     <>
@@ -100,6 +108,7 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
       </div>
 
       {params.saved === "1" ? <div className="toast submit">Report bumbu berhasil disimpan.</div> : null}
+      {params.deleted === "1" ? <div className="toast delete">Report bumbu berhasil dihapus.</div> : null}
 
       {params.error === "missing-store" ? (
         <section className="panel alert" style={{ marginBottom: 16 }}>
@@ -213,6 +222,9 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
           <button className="button primary" type="submit">
             Filter History
           </button>
+          <Link className="button outline" href={`/reports/spices?${resetHistoryParams}`}>
+            Reset
+          </Link>
         </form>
         {historyReports?.length ? (
           <>
@@ -225,6 +237,7 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
                     <th>Bumbu Merah</th>
                     <th>Bumbu Putih</th>
                     <th>Catatan</th>
+                    {profile.role === "admin" ? <th>Aksi</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -235,6 +248,17 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
                       <td>{Number(item.red_spice_stock)}</td>
                       <td>{Number(item.white_spice_stock)}</td>
                       <td>{item.notes ?? "-"}</td>
+                      {profile.role === "admin" ? (
+                        <td>
+                          <form action={deleteDailySpiceReport}>
+                            <input name="id" type="hidden" value={item.id} />
+                            <input name="redirect_to" type="hidden" value={currentPath} />
+                            <button className="button danger" type="submit">
+                              Hapus
+                            </button>
+                          </form>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
 import { SalesReportForm } from "./SalesReportForm";
+import { deleteDailySalesReport } from "./actions";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -22,6 +24,7 @@ function formatRupiah(value: number) {
 
 type SearchParams = Promise<{
   date?: string;
+  deleted?: string;
   error?: string;
   history_date?: string;
   history_store?: string;
@@ -97,6 +100,12 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
   previousParams.set("page", String(Math.max(1, currentPage - 1)));
   const nextParams = new URLSearchParams(historyParams);
   nextParams.set("page", String(Math.min(totalPages, currentPage + 1)));
+  const currentParams = new URLSearchParams(historyParams);
+  currentParams.set("page", String(currentPage));
+  const currentPath = `/reports/sales?${currentParams}`;
+  const resetHistoryParams = new URLSearchParams();
+  resetHistoryParams.set("date", reportDate);
+  resetHistoryParams.set("store", selectedStoreId);
 
   return (
     <>
@@ -109,6 +118,7 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
       </div>
 
       {params.saved === "1" ? <div className="toast submit">Report sales berhasil disimpan.</div> : null}
+      {params.deleted === "1" ? <div className="toast delete">Report sales berhasil dihapus.</div> : null}
 
       {params.error === "missing-store" ? (
         <section className="panel alert" style={{ marginBottom: 16 }}>
@@ -167,6 +177,9 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
           <button className="button primary" type="submit">
             Filter History
           </button>
+          <Link className="button outline" href={`/reports/sales?${resetHistoryParams}`}>
+            Reset
+          </Link>
         </form>
         {historyReports?.length ? (
           <>
@@ -184,6 +197,7 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
                     <th>Pengeluaran</th>
                     <th>Selisih</th>
                     <th>Note</th>
+                    {profile.role === "admin" ? <th>Aksi</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -203,6 +217,17 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
                         </span>
                       </td>
                       <td>{item.notes ?? "-"}</td>
+                      {profile.role === "admin" ? (
+                        <td>
+                          <form action={deleteDailySalesReport}>
+                            <input name="id" type="hidden" value={item.id} />
+                            <input name="redirect_to" type="hidden" value={currentPath} />
+                            <button className="button danger" type="submit">
+                              Hapus
+                            </button>
+                          </form>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

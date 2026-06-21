@@ -21,9 +21,10 @@ import {
   updateStore,
   upsertProfile,
 } from "../actions";
+import { SearchableSelect } from "./SearchableSelect";
 
 type Params = Promise<{ section: string }>;
-type SearchParams = Promise<{ active?: string; page?: string; page_size?: string; q?: string; role?: string; store?: string }>;
+type SearchParams = Promise<{ active?: string; page?: string; page_size?: string; q?: string; role?: string; store?: string; toast?: string; tone?: string }>;
 type Section = "barang" | "store" | "brand" | "mapping-vendor" | "user";
 type ProductVendorRow = ProductVendor & { products?: Product | null };
 
@@ -149,6 +150,9 @@ function MasterFilter({
       <button className="button primary" type="submit">
         Filter
       </button>
+      <Link className="button outline" href={`/admin/master/${section}`}>
+        Reset
+      </Link>
     </form>
   );
 }
@@ -174,6 +178,7 @@ export default async function MasterSectionPage({ params, searchParams }: { para
   const requestedPageSize = Number(query.page_size ?? 10);
   const pageSize = pageSizeOptions.includes(requestedPageSize) ? requestedPageSize : 10;
   const currentPage = Math.max(1, Number(query.page ?? 1) || 1);
+  const toastTone = query.tone === "delete" || query.tone === "draft" || query.tone === "submit" ? query.tone : "submit";
   const baseParams = new URLSearchParams();
   if (q) baseParams.set("q", q);
   if (active !== "all") baseParams.set("active", active);
@@ -207,6 +212,8 @@ export default async function MasterSectionPage({ params, searchParams }: { para
           <p className="muted">Tambah, list, edit, hapus, search, filter, dan pagination data {sectionTitles[sectionParam].toLowerCase()}.</p>
         </div>
       </div>
+
+      {query.toast ? <div className={`toast ${toastTone}`}>{query.toast}</div> : null}
 
       {sectionParam === "barang" ? renderProducts({ active, baseParams, brandRows, currentPage, pageSize, productRows, q, storeRows }) : null}
       {sectionParam === "store" ? renderStores({ active, baseParams, currentPage, pageSize, q, storeRows }) : null}
@@ -308,7 +315,7 @@ function renderMappings({ active, baseParams, currentPage, mappingRows, pageSize
   const page = paginate(filtered, currentPage, pageSize);
   return (
     <>
-      <form className="panel form master-add-form" action={createProductVendor}><h2>Tambah Mapping Vendor</h2><div className="filter-grid"><div className="field"><label>Barang</label><select name="product_id" required>{productRows.map((product) => <option key={product.id} value={product.id}>{productDisplayName(product)}</option>)}</select></div><div className="field"><label>Vendor</label><select name="vendor_id" required>{vendorRows.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></div><label className="checkbox-line"><input name="is_default" type="checkbox" />Default vendor</label><button className="button primary" type="submit">Tambah Mapping</button></div></form>
+      <form className="panel form master-add-form" action={createProductVendor}><h2>Tambah Mapping Vendor</h2><div className="filter-grid"><SearchableSelect label="Barang" name="product_id" options={productRows.map((product) => ({ label: productDisplayName(product), value: product.id }))} /><SearchableSelect label="Vendor" name="vendor_id" options={vendorRows.map((vendor) => ({ label: vendor.name, value: vendor.id }))} /><label className="checkbox-line"><input name="is_default" type="checkbox" />Default vendor</label><button className="button primary" type="submit">Tambah Mapping</button></div></form>
       <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="mapping-vendor" storeFilter={storeFilter} storeRows={storeRows} /><div className="table-wrap"><table><thead><tr><th>Barang</th><th>Vendor</th><th>Default</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((mapping) => (
         <tr key={mapping.id}><td><form id={`mapping-${mapping.id}`} action={updateProductVendor} className="inline-edit-form"><input name="id" type="hidden" value={mapping.id} /><select name="product_id" defaultValue={mapping.product_id}>{productRows.map((product) => <option key={product.id} value={product.id}>{productDisplayName(product)}</option>)}</select></form></td><td><select name="vendor_id" form={`mapping-${mapping.id}`} defaultValue={mapping.vendor_id}>{vendorRows.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></td><td><input name="is_default" form={`mapping-${mapping.id}`} type="checkbox" defaultChecked={mapping.is_default} /></td><td><div className="row-actions"><button className="button outline" form={`mapping-${mapping.id}`} type="submit">Edit</button><form action={deleteProductVendor}><input name="id" type="hidden" value={mapping.id} /><button className="button danger" type="submit">Hapus</button></form></div></td></tr>
       ))}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
