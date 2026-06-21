@@ -158,7 +158,12 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
   }, {});
   const batchGroups = Object.entries(groupedByBatch).sort(([batchA], [batchB]) => Number(batchB) - Number(batchA));
   const requestDateLabel = displayDate(date);
-  const selectedStoreName = selectedStore === "all" ? "all store" : stores?.find((store) => store.id === selectedStore)?.name ?? "all store";
+  const selectedStoreName =
+    profile.role === "staff"
+      ? profile.store_name ?? spiceReports?.[0]?.store_name ?? rows[0]?.purchase_requests?.store_name ?? "store staff"
+      : selectedStore === "all"
+        ? "all store"
+        : stores?.find((store) => store.id === selectedStore)?.name ?? "all store";
 
   return (
     <>
@@ -226,24 +231,22 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
             Tampilkan
           </button>
         </form>
-        {profile.role === "admin" ? (
-          <div className="filter-actions">
-            <CopySummaryButton
-              date={date}
-              outletName={selectedStoreName}
-              rows={reportRows.map((row) => ({
-                productName: row.summaryProductName,
-                qty: row.qty,
-                vendorName: row.vendorName,
-              }))}
-              spiceRows={(spiceReports ?? []).map((report) => ({
-                redSpiceStock: Number(report.red_spice_stock),
-                storeName: report.store_name,
-                whiteSpiceStock: Number(report.white_spice_stock),
-              }))}
-            />
-          </div>
-        ) : null}
+        <div className="filter-actions">
+          <CopySummaryButton
+            date={date}
+            outletName={selectedStoreName}
+            rows={reportRows.map((row) => ({
+              productName: row.summaryProductName,
+              qty: row.qty,
+              vendorName: row.vendorName,
+            }))}
+            spiceRows={(spiceReports ?? []).map((report) => ({
+              redSpiceStock: Number(report.red_spice_stock),
+              storeName: report.store_name,
+              whiteSpiceStock: Number(report.white_spice_stock),
+            }))}
+          />
+        </div>
       </section>
 
       {batchGroups.map(([batchNo, batchRows]) => (
