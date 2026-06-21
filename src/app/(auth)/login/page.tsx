@@ -47,7 +47,7 @@ export default function LoginPage() {
       <section className="login-stage">
         <div className="login-hero">
           <div className="login-brand-badge">JCore</div>
-          <h1>Daily ops, minus the chaos</h1>
+          <h1>Empowering Your Business to Move Faster</h1>
           <p>Management operasional toko dalam satu cockpit yang cepat, mudah dan real time</p>
           <div className="mascot-card image-card">
             <img alt="JCore Jagoan mascot" className="login-mascot-image" src="/images/jcore-jagoan-1000.png" />

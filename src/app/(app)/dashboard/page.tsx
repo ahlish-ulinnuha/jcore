@@ -13,6 +13,21 @@ function todayJakarta() {
   }).format(new Date());
 }
 
+function statusLabel(status: PurchaseRequestItem["status"]) {
+  if (status === "fulfilled") return "Fulfilled";
+  if (status === "unavailable") return "Unavailable";
+  return status.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function statusIcon(status: PurchaseRequestItem["status"]) {
+  if (status === "fulfilled") return "✓";
+  if (status === "unavailable") return "∅";
+  if (status === "partially_available") return "½";
+  if (status === "cancelled") return "×";
+  if (status === "confirmed") return "✓";
+  return "⏳";
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -62,6 +77,14 @@ export default async function DashboardPage() {
   const itemRows = items ?? [];
   const requestRows = requests ?? [];
   const vendorCount = new Set(itemRows.map((item) => item.vendor_id)).size;
+  const groupedItems = Object.values(
+    itemRows.reduce<Record<string, { vendorId: string; vendorName: string; rows: PurchaseRequestItem[] }>>((acc, item) => {
+      const vendorId = item.vendor_id ?? "unknown";
+      acc[vendorId] ??= { vendorId, vendorName: item.vendors?.name ?? "Tanpa vendor", rows: [] };
+      acc[vendorId].rows.push(item);
+      return acc;
+    }, {}),
+  ).sort((a, b) => a.vendorName.localeCompare(b.vendorName));
 
   return (
     <>
@@ -130,41 +153,33 @@ export default async function DashboardPage() {
 
       <section className="panel" style={{ marginTop: 18 }}>
         <h2>Item terbaru</h2>
-        <div className="table-wrap compact-mobile-wrap">
-          <table className="compact-mobile-table">
-            <thead>
-              <tr>
-                <th>Barang</th>
-                <th>Vendor</th>
-                <th>Qty</th>
-                <th>Status</th>
-                <th>Catatan vendor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itemRows.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    {productDisplayName(item.products)}
-                  </td>
-                  <td>{item.vendors?.name ?? "-"}</td>
-                  <td>
-                    {item.qty} {item.unit}
-                  </td>
-                  <td>
-                    <span className={`badge ${item.status}`}>{item.status.replaceAll("_", " ")}</span>
-                  </td>
-                  <td>{item.vendor_note ?? "-"}</td>
-                </tr>
-              ))}
-              {itemRows.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>Belum ada request hari ini.</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+        {groupedItems.length ? (
+          <div className="vendor-report-list dashboard-vendor-list">
+            {groupedItems.map((vendor) => (
+              <section className="vendor-report-group dashboard-vendor-group" key={vendor.vendorId}>
+                <h3>{vendor.vendorName}</h3>
+                <div className="report-item-list">
+                  {vendor.rows.map((item) => (
+                    <div className="report-item-row dashboard-item-row" key={item.id}>
+                      <span className="report-item-product">{productDisplayName(item.products)}</span>
+                      <span className="report-item-qty">{item.qty}</span>
+                      <span
+                        aria-label={statusLabel(item.status)}
+                        className={`status-icon ${item.status}`}
+                        data-tooltip={statusLabel(item.status)}
+                        tabIndex={0}
+                      >
+                        {statusIcon(item.status)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">Belum ada request hari ini.</p>
+        )}
       </section>
     </>
   );
