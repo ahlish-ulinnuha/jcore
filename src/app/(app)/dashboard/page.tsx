@@ -91,8 +91,8 @@ export default async function DashboardPage() {
 
       <section className="panel" style={{ marginTop: 18 }}>
         <h2>Request hari ini</h2>
-        <div className="table-wrap">
-          <table>
+        <div className="table-wrap compact-mobile-wrap">
+          <table className="compact-mobile-table">
             <thead>
               <tr>
                 <th>No Request</th>
@@ -130,8 +130,8 @@ export default async function DashboardPage() {
 
       <section className="panel" style={{ marginTop: 18 }}>
         <h2>Item terbaru</h2>
-        <div className="table-wrap">
-          <table>
+        <div className="table-wrap compact-mobile-wrap">
+          <table className="compact-mobile-table">
             <thead>
               <tr>
                 <th>Barang</th>

@@ -216,8 +216,8 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
         </form>
         {historyReports?.length ? (
           <>
-            <div className="table-wrap">
-              <table>
+            <div className="table-wrap compact-mobile-wrap">
+              <table className="compact-mobile-table">
                 <thead>
                   <tr>
                     <th>Tanggal</th>

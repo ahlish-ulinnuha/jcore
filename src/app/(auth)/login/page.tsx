@@ -18,9 +18,9 @@ export default function LoginPage() {
     setError("");
 
     const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
 
     if (loginError) {
+      setLoading(false);
       setError(loginError.message);
       return;
     }
@@ -31,6 +31,11 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
+      {loading ? (
+        <div className="route-loading-overlay">
+          <div className="route-spinner" aria-label="Loading" />
+        </div>
+      ) : null}
       <div className="login-mascot-bg" aria-hidden="true">
         <svg className="mascot-orbit mascot-orbit-one" fill="none" viewBox="0 0 140 140">
           <path d="M36 78c-16-8-21-28-9-42 16-19 48-14 59 8 9 18 31 16 39 33 7 16-7 33-26 35-19 1-21-12-35-10-15 2-17-17-28-24Z" />

@@ -55,6 +55,15 @@ function statusLabel(status: PurchaseRequestItem["status"]) {
   return status.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function statusIcon(status: PurchaseRequestItem["status"]) {
+  if (status === "fulfilled") return "✓";
+  if (status === "unavailable") return "∅";
+  if (status === "partially_available") return "½";
+  if (status === "cancelled") return "×";
+  if (status === "confirmed") return "✓";
+  return "⏳";
+}
+
 function summaryProductName(item: ItemWithRequest) {
   const name = item.products?.name?.toLowerCase() ?? "-";
   const brand = item.products?.brands?.name ? ` - ${item.products.brands.name.toUpperCase()}` : "";
@@ -157,6 +166,16 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     return acc;
   }, {});
   const batchGroups = Object.entries(groupedByBatch).sort(([batchA], [batchB]) => Number(batchB) - Number(batchA));
+  const batchVendorGroups = batchGroups.map(([batchNo, batchRows]) => {
+    const vendors = Object.values(
+      batchRows.reduce<Record<string, { vendorId: string; vendorName: string; rows: ReportRow[] }>>((acc, row) => {
+        acc[row.vendorId] ??= { vendorId: row.vendorId, vendorName: row.vendorName, rows: [] };
+        acc[row.vendorId].rows.push(row);
+        return acc;
+      }, {}),
+    ).sort((a, b) => a.vendorName.localeCompare(b.vendorName));
+    return { batchNo, vendors };
+  });
   const requestDateLabel = displayDate(date);
   const selectedStoreName =
     profile.role === "staff"
@@ -249,38 +268,33 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         </div>
       </section>
 
-      {batchGroups.map(([batchNo, batchRows]) => (
-        <section className="panel" key={batchNo} style={{ marginBottom: 16 }}>
+      {batchVendorGroups.map((batchGroup) => (
+        <section className="panel daily-report-group" key={batchGroup.batchNo}>
           <h2>
-            Batch {batchNo} <span className="muted">· {requestDateLabel}</span>
+            Batch {batchGroup.batchNo} <span className="muted">- {requestDateLabel}</span>
           </h2>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Batch</th>
-                  <th>Vendor</th>
-                  <th>Barang</th>
-                  <th>Total Qty</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {batchRows.map((row) => (
-                  <tr key={`${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`}>
-                    <td>Batch {row.batchNo}</td>
-                    <td>{row.vendorName}</td>
-                    <td>{row.productName}</td>
-                    <td>
-                      {row.qty} {row.unit}
-                    </td>
-                    <td>
-                      <span className={`badge ${row.status}`}>{statusLabel(row.status)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="vendor-report-list">
+            {batchGroup.vendors.map((vendor) => (
+              <section className="vendor-report-group" key={`${batchGroup.batchNo}-${vendor.vendorId}`}>
+                <h3>{vendor.vendorName}</h3>
+                <div className="report-item-list">
+                  {vendor.rows.map((row) => (
+                    <div className="report-item-row" key={`${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`}>
+                      <span className="report-item-product">{row.productName}</span>
+                      <span className="report-item-qty">{row.qty}</span>
+                      <span
+                        aria-label={statusLabel(row.status)}
+                        className={`status-icon ${row.status}`}
+                        data-tooltip={statusLabel(row.status)}
+                        tabIndex={0}
+                      >
+                        {statusIcon(row.status)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         </section>
       ))}
