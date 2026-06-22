@@ -22,6 +22,16 @@ function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function normalizeAlias(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 async function redirectWithToast(message: string, tone: "draft" | "submit" | "delete" = "submit") {
   const headerList = await headers();
   const referer = headerList.get("referer") ?? "/admin/master";
@@ -190,4 +200,140 @@ export async function deleteProductVendor(formData: FormData) {
   const supabase = await requireAdmin();
   await supabase.from("product_vendors").delete().eq("id", text(formData, "id"));
   revalidatePath("/admin/master");
+}
+
+export async function createProductVendorAlias(formData: FormData) {
+  const supabase = await requireAdmin();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const aliasName = text(formData, "alias_name");
+  const productId = text(formData, "product_id");
+  const vendorId = text(formData, "vendor_id");
+
+  await supabase.from("product_vendors").upsert(
+    {
+      product_id: productId,
+      vendor_id: vendorId,
+      is_default: false,
+    },
+    { onConflict: "product_id,vendor_id" },
+  );
+
+  await supabase.from("product_vendor_aliases").upsert(
+    {
+      alias_name: aliasName,
+      normalized_alias_name: normalizeAlias(aliasName),
+      notes: text(formData, "notes") || null,
+      product_id: productId,
+      vendor_id: vendorId,
+      created_by: user?.id ?? null,
+      updated_by: user?.id ?? null,
+    },
+    { onConflict: "vendor_id,normalized_alias_name" },
+  );
+
+  revalidatePath("/admin/master/alias-vendor");
+  await redirectWithToast("Alias vendor berhasil disimpan.", "submit");
+}
+
+export async function updateProductVendorAlias(formData: FormData) {
+  const supabase = await requireAdmin();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const aliasName = text(formData, "alias_name");
+  const productId = text(formData, "product_id");
+  const vendorId = text(formData, "vendor_id");
+
+  await supabase.from("product_vendors").upsert(
+    {
+      product_id: productId,
+      vendor_id: vendorId,
+      is_default: false,
+    },
+    { onConflict: "product_id,vendor_id" },
+  );
+
+  await supabase
+    .from("product_vendor_aliases")
+    .update({
+      alias_name: aliasName,
+      normalized_alias_name: normalizeAlias(aliasName),
+      notes: text(formData, "notes") || null,
+      product_id: productId,
+      vendor_id: vendorId,
+      is_active: formData.get("is_active") === "on",
+      updated_by: user?.id ?? null,
+    })
+    .eq("id", text(formData, "id"));
+
+  revalidatePath("/admin/master/alias-vendor");
+}
+
+export async function deleteProductVendorAlias(formData: FormData) {
+  const supabase = await requireAdmin();
+  await supabase.from("product_vendor_aliases").delete().eq("id", text(formData, "id"));
+  revalidatePath("/admin/master/alias-vendor");
+}
+
+export async function updateProductVendorPrice(formData: FormData) {
+  const supabase = await requireAdmin();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const productId = text(formData, "product_id");
+  const vendorId = text(formData, "vendor_id");
+  const newPrice = Math.max(0, Number(text(formData, "current_price")) || 0);
+
+  await supabase.from("product_vendors").upsert(
+    {
+      product_id: productId,
+      vendor_id: vendorId,
+      is_default: false,
+    },
+    { onConflict: "product_id,vendor_id" },
+  );
+
+  const { data: existing } = await supabase
+    .from("product_vendor_prices")
+    .select("id, current_price")
+    .eq("product_id", productId)
+    .eq("vendor_id", vendorId)
+    .maybeSingle<{ id: string; current_price: number }>();
+
+  const oldPrice = existing?.current_price == null ? null : Number(existing.current_price);
+
+  if (existing?.id) {
+    await supabase
+      .from("product_vendor_prices")
+      .update({
+        current_price: newPrice,
+        last_source: "manual",
+        updated_by: user?.id ?? null,
+      })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("product_vendor_prices").insert({
+      product_id: productId,
+      vendor_id: vendorId,
+      current_price: newPrice,
+      last_source: "manual",
+      updated_by: user?.id ?? null,
+    });
+  }
+
+  if (oldPrice !== newPrice) {
+    await supabase.from("product_price_history").insert({
+      product_id: productId,
+      vendor_id: vendorId,
+      old_price: oldPrice,
+      new_price: newPrice,
+      source: "manual",
+      changed_by: user?.id ?? null,
+    });
+  }
+
+  revalidatePath("/admin/master/harga-vendor");
+  await redirectWithToast("Harga vendor berhasil diperbarui.", "submit");
 }

@@ -18,32 +18,42 @@ export function VendorPortal({ items }: { items: VendorItem[] }) {
   const supabase = createClient();
   const [rows, setRows] = useState(items);
   const [message, setMessage] = useState("");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   async function updateItem(itemId: string, patch: Partial<PurchaseRequestItem>) {
     setMessage("");
     const { error } = await supabase.from("purchase_request_items").update(patch).eq("id", itemId);
 
     if (error) {
-      setMessage("Update belum berhasil. Mohon coba lagi.");
-      return;
+      setMessage(`Update belum berhasil: ${error.message}`);
+      return false;
     }
 
     setRows((current) => current.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
+    return true;
   }
 
   async function uploadReceipt(itemId: string, file: File | null) {
     if (!file) return;
     setMessage("");
-    const path = `${itemId}/${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage.from("vendor-receipts").upload(path, file, { upsert: true });
+    setUploadingId(itemId);
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `${itemId}/${Date.now()}-${safeFileName}`;
+    const { error: uploadError } = await supabase.storage.from("vendor-receipts").upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: true,
+    });
 
     if (uploadError) {
-      setMessage("Upload struk belum berhasil.");
+      setMessage(`Upload struk belum berhasil: ${uploadError.message}`);
+      setUploadingId(null);
       return;
     }
 
     const { data } = supabase.storage.from("vendor-receipts").getPublicUrl(path);
-    await updateItem(itemId, { receipt_url: data.publicUrl });
+    const updated = await updateItem(itemId, { receipt_url: data.publicUrl });
+    setUploadingId(null);
+    if (updated) setMessage("Struk berhasil diupload.");
   }
 
   return (
@@ -95,7 +105,8 @@ export function VendorPortal({ items }: { items: VendorItem[] }) {
                 </td>
                 <td>
                   <div className="row-actions">
-                    <input type="file" accept="image/*,.pdf" onChange={(event) => uploadReceipt(item.id, event.target.files?.[0] ?? null)} />
+                    <input disabled={uploadingId === item.id} type="file" accept="image/*,.pdf" onChange={(event) => uploadReceipt(item.id, event.target.files?.[0] ?? null)} />
+                    {uploadingId === item.id ? <span className="muted">Uploading...</span> : null}
                     {item.receipt_url ? (
                       <a className="button" href={item.receipt_url} target="_blank">
                         Lihat

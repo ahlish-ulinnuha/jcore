@@ -47,6 +47,55 @@ export type ProductVendor = {
   product_id: string;
   vendor_id: string;
   is_default: boolean;
+  products?: Product | null;
+  vendors?: Vendor | null;
+};
+
+export type ProductVendorAlias = {
+  id: string;
+  product_id: string;
+  vendor_id: string;
+  alias_name: string;
+  normalized_alias_name: string;
+  confidence: number;
+  is_active: boolean;
+  notes: string | null;
+  last_used_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  products?: Product | null;
+  vendors?: Vendor | null;
+};
+
+export type ProductVendorPrice = {
+  id: string;
+  product_id: string;
+  vendor_id: string;
+  current_price: number;
+  last_source: string | null;
+  last_source_id: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  products?: Product | null;
+  vendors?: Vendor | null;
+};
+
+export type ProductPriceHistory = {
+  id: string;
+  product_id: string;
+  vendor_id: string;
+  old_price: number | null;
+  new_price: number;
+  price_diff: number;
+  price_diff_percent: number | null;
+  source: string | null;
+  source_id: string | null;
+  changed_by: string | null;
+  changed_at: string;
+  products?: Product | null;
   vendors?: Vendor | null;
 };
 

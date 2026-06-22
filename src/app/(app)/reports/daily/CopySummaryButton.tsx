@@ -5,6 +5,7 @@ import { useState } from "react";
 type SummaryRow = {
   productName: string;
   qty: number;
+  storeNames?: string[];
   vendorName: string;
 };
 
@@ -23,6 +24,10 @@ function formatQty(value: number) {
   return Number.isInteger(value) ? String(value) : String(value).replace(/\.?0+$/, "");
 }
 
+function shouldShowStoreNames(vendorName: string) {
+  return vendorName.trim().toUpperCase() !== "NR";
+}
+
 export function CopySummaryButton({
   date,
   outletName,
@@ -38,6 +43,7 @@ export function CopySummaryButton({
   const [includeSpiceStock, setIncludeSpiceStock] = useState(true);
 
   async function copySummary() {
+    const activeDate = new URLSearchParams(window.location.search).get("date") ?? date;
     const grouped = rows.reduce<Record<string, SummaryRow[]>>((acc, row) => {
       acc[row.vendorName] ??= [];
       acc[row.vendorName].push(row);
@@ -49,7 +55,11 @@ export function CopySummaryButton({
       .map(([vendorName, vendorRows]) => {
         const lines = vendorRows
           .sort((a, b) => a.productName.localeCompare(b.productName))
-          .map((row) => `- ${row.productName} / ${row.qty}`);
+          .map((row) => {
+            const storeNames = shouldShowStoreNames(row.vendorName) ? [...(row.storeNames ?? [])].sort().join(" ") : "";
+            const productName = storeNames ? `${row.productName} ${storeNames}` : row.productName;
+            return `- ${productName} / ${row.qty}`;
+          });
         return [`Request ${vendorName}`, ...lines].join("\n");
       });
 
@@ -64,7 +74,7 @@ export function CopySummaryButton({
         ].join("\n")
       : "";
     const allSections = spiceSection ? [...sections, spiceSection] : sections;
-    const text = [`*_📋✨ Summary Request ${formatDate(date)}_*`, `Outlet: ${outletName}`, ...allSections].join("\n------------------------------ \n");
+    const text = [`*_📋✨ Summary Request ${formatDate(activeDate)}_*`, `Outlet: ${outletName}`, ...allSections].join("\n------------------------------ \n");
     await navigator.clipboard.writeText(text);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);

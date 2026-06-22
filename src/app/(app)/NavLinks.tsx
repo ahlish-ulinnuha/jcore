@@ -18,6 +18,8 @@ const masterLinks = [
   { href: "/admin/master/store", label: "Store" },
   { href: "/admin/master/brand", label: "Brand" },
   { href: "/admin/master/mapping-vendor", label: "Mapping Vendor" },
+  { href: "/admin/master/alias-vendor", label: "Alias Vendor" },
+  { href: "/admin/master/harga-vendor", label: "Harga Vendor" },
   { href: "/admin/master/user", label: "User" },
 ];
 

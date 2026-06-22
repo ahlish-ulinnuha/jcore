@@ -2,14 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
-import type { Brand, Product, ProductVendor, Profile, Store, Vendor } from "@/lib/types";
+import type { Brand, Product, ProductPriceHistory, ProductVendor, ProductVendorAlias, ProductVendorPrice, Profile, Store, Vendor } from "@/lib/types";
 import {
   createBrand,
   createProduct,
+  createProductVendorAlias,
   createProductVendor,
   createStore,
   deleteBrand,
   deleteProduct,
+  deleteProductVendorAlias,
   deleteProductVendor,
   deleteProfile,
   deleteStore,
@@ -17,6 +19,8 @@ import {
   resetProfilePassword,
   updateBrand,
   updateProduct,
+  updateProductVendorAlias,
+  updateProductVendorPrice,
   updateProductVendor,
   updateStore,
   upsertProfile,
@@ -25,21 +29,34 @@ import { SearchableSelect } from "./SearchableSelect";
 
 type Params = Promise<{ section: string }>;
 type SearchParams = Promise<{ active?: string; page?: string; page_size?: string; q?: string; role?: string; store?: string; toast?: string; tone?: string }>;
-type Section = "barang" | "store" | "brand" | "mapping-vendor" | "user";
+type Section = "barang" | "store" | "brand" | "mapping-vendor" | "alias-vendor" | "harga-vendor" | "user";
 type ProductVendorRow = ProductVendor & { products?: Product | null };
+type ProductVendorAliasRow = ProductVendorAlias & { products?: Product | null; vendors?: Vendor | null };
+type ProductVendorPriceRow = ProductVendorPrice & { products?: Product | null; vendors?: Vendor | null };
+type ProductPriceHistoryRow = ProductPriceHistory & { products?: Product | null; vendors?: Vendor | null };
 
 const sectionTitles: Record<Section, string> = {
   barang: "Barang",
   store: "Store",
   brand: "Brand",
   "mapping-vendor": "Mapping Vendor",
+  "alias-vendor": "Alias Vendor",
+  "harga-vendor": "Harga Vendor",
   user: "User",
 };
 
 const pageSizeOptions = [10, 20, 50, 100];
 
 function isSection(value: string): value is Section {
-  return ["barang", "store", "brand", "mapping-vendor", "user"].includes(value);
+  return ["barang", "store", "brand", "mapping-vendor", "alias-vendor", "harga-vendor", "user"].includes(value);
+}
+
+function formatRupiah(value: number | null | undefined) {
+  return new Intl.NumberFormat("id-ID", {
+    currency: "IDR",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(Number(value ?? 0));
 }
 
 function paginate<T>(rows: T[], page: number, pageSize: number) {
@@ -102,7 +119,7 @@ function MasterFilter({
         <label>Search</label>
         <input name="q" defaultValue={q} placeholder="Cari data..." />
       </div>
-      {["barang", "store", "brand"].includes(section) ? (
+      {["barang", "store", "brand", "alias-vendor"].includes(section) ? (
         <div className="field">
           <label>Status</label>
           <select name="active" defaultValue={active}>
@@ -186,7 +203,7 @@ export default async function MasterSectionPage({ params, searchParams }: { para
   if (storeFilter !== "all") baseParams.set("store", storeFilter);
   baseParams.set("page_size", String(pageSize));
 
-  const [{ data: stores }, { data: brands }, { data: products }, { data: vendors }, { data: profiles }, { data: mappings }] =
+  const [{ data: stores }, { data: brands }, { data: products }, { data: vendors }, { data: profiles }, { data: mappings }, { data: aliases }, { data: prices }, { data: priceHistory }] =
     await Promise.all([
       supabase.from("stores").select("*").order("name").returns<Store[]>(),
       supabase.from("brands").select("*").order("name").returns<Brand[]>(),
@@ -194,6 +211,9 @@ export default async function MasterSectionPage({ params, searchParams }: { para
       supabase.from("vendors").select("*").order("name").returns<Vendor[]>(),
       supabase.from("profiles").select("*, stores(*)").order("full_name").returns<Profile[]>(),
       supabase.from("product_vendors").select("*, products(*, brands(*)), vendors(*)").order("created_at", { ascending: false }).returns<ProductVendorRow[]>(),
+      supabase.from("product_vendor_aliases").select("*, products(*, brands(*)), vendors(*)").order("updated_at", { ascending: false }).returns<ProductVendorAliasRow[]>(),
+      supabase.from("product_vendor_prices").select("*, products(*, brands(*)), vendors(*)").order("updated_at", { ascending: false }).returns<ProductVendorPriceRow[]>(),
+      supabase.from("product_price_history").select("*, products(*, brands(*)), vendors(*)").order("changed_at", { ascending: false }).limit(100).returns<ProductPriceHistoryRow[]>(),
     ]);
 
   const storeRows = stores ?? [];
@@ -202,6 +222,9 @@ export default async function MasterSectionPage({ params, searchParams }: { para
   const vendorRows = vendors ?? [];
   const profileRows = profiles ?? [];
   const mappingRows = mappings ?? [];
+  const aliasRows = aliases ?? [];
+  const priceRows = prices ?? [];
+  const priceHistoryRows = priceHistory ?? [];
 
   return (
     <>
@@ -219,6 +242,8 @@ export default async function MasterSectionPage({ params, searchParams }: { para
       {sectionParam === "store" ? renderStores({ active, baseParams, currentPage, pageSize, q, storeRows }) : null}
       {sectionParam === "brand" ? renderBrands({ active, baseParams, brandRows, currentPage, pageSize, q, storeRows }) : null}
       {sectionParam === "mapping-vendor" ? renderMappings({ active, baseParams, currentPage, mappingRows, pageSize, productRows, q, roleFilter, storeFilter, storeRows, vendorRows }) : null}
+      {sectionParam === "alias-vendor" ? renderAliases({ active, aliasRows, baseParams, currentPage, pageSize, productRows, q, roleFilter, storeFilter, storeRows, vendorRows }) : null}
+      {sectionParam === "harga-vendor" ? renderVendorPrices({ baseParams, currentPage, pageSize, priceHistoryRows, priceRows, productRows, q, roleFilter, storeFilter, storeRows, vendorRows }) : null}
       {sectionParam === "user" ? renderUsers({ active, baseParams, currentPage, pageSize, profileRows, q, roleFilter, storeFilter, storeRows }) : null}
     </>
   );
@@ -319,6 +344,161 @@ function renderMappings({ active, baseParams, currentPage, mappingRows, pageSize
       <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="mapping-vendor" storeFilter={storeFilter} storeRows={storeRows} /><div className="table-wrap"><table><thead><tr><th>Barang</th><th>Vendor</th><th>Default</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((mapping) => (
         <tr key={mapping.id}><td><form id={`mapping-${mapping.id}`} action={updateProductVendor} className="inline-edit-form"><input name="id" type="hidden" value={mapping.id} /><select name="product_id" defaultValue={mapping.product_id}>{productRows.map((product) => <option key={product.id} value={product.id}>{productDisplayName(product)}</option>)}</select></form></td><td><select name="vendor_id" form={`mapping-${mapping.id}`} defaultValue={mapping.vendor_id}>{vendorRows.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></td><td><input name="is_default" form={`mapping-${mapping.id}`} type="checkbox" defaultChecked={mapping.is_default} /></td><td><div className="row-actions"><button className="button outline" form={`mapping-${mapping.id}`} type="submit">Edit</button><form action={deleteProductVendor}><input name="id" type="hidden" value={mapping.id} /><button className="button danger" type="submit">Hapus</button></form></div></td></tr>
       ))}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
+    </>
+  );
+}
+
+function renderAliases({
+  active,
+  aliasRows,
+  baseParams,
+  currentPage,
+  pageSize,
+  productRows,
+  q,
+  roleFilter,
+  storeFilter,
+  storeRows,
+  vendorRows,
+}: {
+  active: string;
+  aliasRows: ProductVendorAliasRow[];
+  baseParams: URLSearchParams;
+  currentPage: number;
+  pageSize: number;
+  productRows: Product[];
+  q: string;
+  roleFilter: string;
+  storeFilter: string;
+  storeRows: Store[];
+  vendorRows: Vendor[];
+}) {
+  const filtered = filterActive(aliasRows, active).filter((alias) => {
+    const text = [
+      alias.alias_name,
+      alias.normalized_alias_name,
+      alias.products ? productDisplayName(alias.products) : "",
+      alias.vendors?.name ?? "",
+      alias.notes ?? "",
+    ].join(" ").toLowerCase();
+    return !q || text.includes(q);
+  });
+  const page = paginate(filtered, currentPage, pageSize);
+
+  return (
+    <>
+      <form className="panel form master-add-form" action={createProductVendorAlias}>
+        <h2>Tambah Alias Vendor</h2>
+        <p className="muted">Isi nama barang persis seperti yang muncul di struk vendor, lalu hubungkan ke master barang internal.</p>
+        <div className="filter-grid">
+          <div className="field"><label>Nama di Struk Vendor</label><input name="alias_name" required placeholder="Contoh: SOS JMB SAM" /></div>
+          <SearchableSelect label="Barang Internal" name="product_id" options={productRows.map((product) => ({ label: productDisplayName(product), value: product.id }))} />
+          <SearchableSelect label="Vendor" name="vendor_id" options={vendorRows.map((vendor) => ({ label: vendor.name, value: vendor.id }))} />
+          <div className="field"><label>Catatan</label><input name="notes" placeholder="Opsional" /></div>
+          <button className="button primary" type="submit">Tambah Alias</button>
+        </div>
+      </form>
+      <section className="panel">
+        <MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="alias-vendor" storeFilter={storeFilter} storeRows={storeRows} />
+        <div className="table-wrap"><table><thead><tr><th>Alias Struk</th><th>Barang Internal</th><th>Vendor</th><th>Normalized</th><th>Aktif</th><th>Catatan</th><th>Aksi</th></tr></thead><tbody>
+          {page.rows.map((alias) => (
+            <tr key={alias.id}>
+              <td><form id={`alias-${alias.id}`} action={updateProductVendorAlias} className="inline-edit-form"><input name="id" type="hidden" value={alias.id} /><input name="alias_name" defaultValue={alias.alias_name} required /></form></td>
+              <td><select name="product_id" form={`alias-${alias.id}`} defaultValue={alias.product_id}>{productRows.map((product) => <option key={product.id} value={product.id}>{productDisplayName(product)}</option>)}</select></td>
+              <td><select name="vendor_id" form={`alias-${alias.id}`} defaultValue={alias.vendor_id}>{vendorRows.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></td>
+              <td>{alias.normalized_alias_name}</td>
+              <td><input name="is_active" form={`alias-${alias.id}`} type="checkbox" defaultChecked={alias.is_active} /></td>
+              <td><input name="notes" form={`alias-${alias.id}`} defaultValue={alias.notes ?? ""} /></td>
+              <td><div className="row-actions"><button className="button outline" form={`alias-${alias.id}`} type="submit">Edit</button><form action={deleteProductVendorAlias}><input name="id" type="hidden" value={alias.id} /><button className="button danger" type="submit">Hapus</button></form></div></td>
+            </tr>
+          ))}
+        </tbody></table></div>
+        <Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} />
+      </section>
+    </>
+  );
+}
+
+function renderVendorPrices({
+  baseParams,
+  currentPage,
+  pageSize,
+  priceHistoryRows,
+  priceRows,
+  productRows,
+  q,
+  roleFilter,
+  storeFilter,
+  storeRows,
+  vendorRows,
+}: {
+  baseParams: URLSearchParams;
+  currentPage: number;
+  pageSize: number;
+  priceHistoryRows: ProductPriceHistoryRow[];
+  priceRows: ProductVendorPriceRow[];
+  productRows: Product[];
+  q: string;
+  roleFilter: string;
+  storeFilter: string;
+  storeRows: Store[];
+  vendorRows: Vendor[];
+}) {
+  const filtered = priceRows.filter((row) => {
+    const text = [row.products ? productDisplayName(row.products) : "", row.vendors?.name ?? "", row.current_price].join(" ").toLowerCase();
+    return !q || text.includes(q);
+  });
+  const page = paginate(filtered, currentPage, pageSize);
+
+  return (
+    <>
+      <form className="panel form master-add-form" action={updateProductVendorPrice}>
+        <h2>Update Harga Vendor</h2>
+        <p className="muted">Set harga terbaru untuk barang-vendor. Jika berubah, sistem otomatis mencatat history perubahan harga.</p>
+        <div className="filter-grid">
+          <SearchableSelect label="Barang" name="product_id" options={productRows.map((product) => ({ label: productDisplayName(product), value: product.id }))} />
+          <SearchableSelect label="Vendor" name="vendor_id" options={vendorRows.map((vendor) => ({ label: vendor.name, value: vendor.id }))} />
+          <div className="field"><label>Harga Terbaru</label><input min="0" name="current_price" required step="1" type="number" /></div>
+          <button className="button primary" type="submit">Update Harga</button>
+        </div>
+      </form>
+
+      <section className="panel">
+        <h2>Harga Aktif</h2>
+        <MasterFilter active="all" pageSize={pageSize} q={q} roleFilter={roleFilter} section="harga-vendor" storeFilter={storeFilter} storeRows={storeRows} />
+        <div className="table-wrap"><table><thead><tr><th>Barang</th><th>Vendor</th><th>Harga Aktif</th><th>Source</th><th>Update Terakhir</th></tr></thead><tbody>
+          {page.rows.map((row) => (
+            <tr key={row.id}>
+              <td>{row.products ? productDisplayName(row.products) : "-"}</td>
+              <td>{row.vendors?.name ?? "-"}</td>
+              <td>{formatRupiah(Number(row.current_price))}</td>
+              <td>{row.last_source ?? "-"}</td>
+              <td>{row.updated_at}</td>
+            </tr>
+          ))}
+          {page.rows.length === 0 ? <tr><td colSpan={5}>Belum ada harga vendor.</td></tr> : null}
+        </tbody></table></div>
+        <Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} />
+      </section>
+
+      <section className="panel">
+        <h2>History Perubahan Harga</h2>
+        <div className="table-wrap"><table><thead><tr><th>Tanggal</th><th>Barang</th><th>Vendor</th><th>Harga Lama</th><th>Harga Baru</th><th>Selisih</th><th>%</th><th>Source</th></tr></thead><tbody>
+          {priceHistoryRows.map((row) => (
+            <tr key={row.id}>
+              <td>{row.changed_at}</td>
+              <td>{row.products ? productDisplayName(row.products) : "-"}</td>
+              <td>{row.vendors?.name ?? "-"}</td>
+              <td>{row.old_price == null ? "-" : formatRupiah(Number(row.old_price))}</td>
+              <td>{formatRupiah(Number(row.new_price))}</td>
+              <td>{formatRupiah(Number(row.price_diff))}</td>
+              <td>{row.price_diff_percent == null ? "-" : `${Number(row.price_diff_percent).toFixed(2)}%`}</td>
+              <td>{row.source ?? "-"}</td>
+            </tr>
+          ))}
+          {priceHistoryRows.length === 0 ? <tr><td colSpan={8}>Belum ada history perubahan harga.</td></tr> : null}
+        </tbody></table></div>
+      </section>
     </>
   );
 }

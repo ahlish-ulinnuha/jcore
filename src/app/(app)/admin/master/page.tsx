@@ -8,6 +8,8 @@ const masterMenus = [
   { href: "/admin/master/store", title: "Store", description: "Tambah store, list store, edit, hapus." },
   { href: "/admin/master/brand", title: "Brand", description: "Tambah, list, edit, hapus brand." },
   { href: "/admin/master/mapping-vendor", title: "Mapping Vendor", description: "Kelola mapping barang ke vendor." },
+  { href: "/admin/master/alias-vendor", title: "Alias Vendor", description: "Kelola nama barang versi struk vendor ke master barang." },
+  { href: "/admin/master/harga-vendor", title: "Harga Vendor", description: "Kelola harga vendor terkini dan lihat histori perubahan harga." },
   { href: "/admin/master/user", title: "User", description: "Kelola profile user staff, admin, dan vendor." },
 ];
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
-import type { DailySpiceReport, Profile, PurchaseRequestItem, Store } from "@/lib/types";
+import type { DailySpiceReport, Profile, PurchaseRequest, PurchaseRequestItem, Store } from "@/lib/types";
 import { CopySummaryButton } from "./CopySummaryButton";
 
 type ItemWithRequest = PurchaseRequestItem & {
@@ -12,6 +12,7 @@ type ItemWithRequest = PurchaseRequestItem & {
     batch_no?: number;
     store_id?: string | null;
     store_name?: string;
+    status?: PurchaseRequest["status"];
   };
 };
 
@@ -23,6 +24,7 @@ type ReportRow = {
   productName: string;
   summaryProductName: string;
   qty: number;
+  storeNames: string[];
   unit: string;
   status: PurchaseRequestItem["status"];
 };
@@ -42,12 +44,25 @@ function displayDate(value: string) {
   return `${day}-${month}-${year}`;
 }
 
-type SearchParams = Promise<{ batch?: string; date?: string; status?: string; store?: string; vendor?: string }>;
+type SearchParams = Promise<{
+  batch?: string;
+  date?: string;
+  request_status?: string;
+  status?: string;
+  store?: string;
+  vendor?: string;
+}>;
 
 const statusOptions = [
   { label: "Requested", value: "requested" },
   { label: "Fulfilled", value: "fulfilled" },
   { label: "Unavailable", value: "unavailable" },
+];
+
+const requestStatusOptions = [
+  { label: "Submitted", value: "submitted" },
+  { label: "Draft", value: "draft" },
+  { label: "All Request Status", value: "all" },
 ];
 
 function statusLabel(status: PurchaseRequestItem["status"]) {
@@ -67,7 +82,8 @@ function statusIcon(status: PurchaseRequestItem["status"]) {
 
 function summaryProductName(item: ItemWithRequest) {
   const name = item.products?.name?.toLowerCase() ?? "-";
-  const brand = item.products?.brands?.name ? ` - ${item.products.brands.name.toUpperCase()}` : "";
+  const brandName = item.products?.brands?.name?.trim().toUpperCase();
+  const brand = brandName && brandName !== "NOBRAND" ? ` - ${brandName}` : "";
   return `${name}${brand}`;
 }
 
@@ -85,6 +101,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
   const date = params.date ?? todayJakarta();
   const selectedVendor = params.vendor ?? "all";
   const selectedStatus = params.status ?? "all";
+  const selectedRequestStatus = profile.role === "admin" ? params.request_status ?? "submitted" : "submitted";
   const selectedStore = profile.role === "admin" ? params.store ?? "all" : profile.store_id ?? "all";
   const staffStoreId = profile.role === "staff" ? profile.store_id : null;
 
@@ -96,8 +113,11 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     .from("purchase_request_items")
     .select("*, products(*, brands(*)), vendors(*), purchase_requests!inner(request_date, request_no, batch_no, store_id, store_name, status)")
     .eq("purchase_requests.request_date", date)
-    .eq("purchase_requests.status", "submitted")
     .order("vendor_id");
+
+  if (selectedRequestStatus !== "all") {
+    itemsQuery.eq("purchase_requests.status", selectedRequestStatus);
+  }
 
   if (staffStoreId) {
     itemsQuery.eq("purchase_requests.store_id", staffStoreId);
@@ -152,10 +172,15 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         productName,
         summaryProductName: summaryProductName(item),
         qty: 0,
+        storeNames: [],
         unit: item.unit,
         status: item.status,
       };
       acc[key].qty += Number(item.qty);
+      const storeName = item.purchase_requests?.store_name?.trim();
+      if (storeName && !acc[key].storeNames.includes(storeName)) {
+        acc[key].storeNames.push(storeName);
+      }
       return acc;
     }, {}),
   ).sort((a, b) => b.batchNo - a.batchNo || a.vendorName.localeCompare(b.vendorName) || a.productName.localeCompare(b.productName));
@@ -225,6 +250,18 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
               </select>
             </div>
           ) : null}
+          {profile.role === "admin" ? (
+            <div className="field">
+              <label>Request Status</label>
+              <select name="request_status" defaultValue={selectedRequestStatus}>
+                {requestStatusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="field">
             <label>Vendor</label>
             <select name="vendor" defaultValue={selectedVendor}>
@@ -261,6 +298,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
             rows={reportRows.map((row) => ({
               productName: row.summaryProductName,
               qty: row.qty,
+              storeNames: row.storeNames,
               vendorName: row.vendorName,
             }))}
             spiceRows={(spiceReports ?? []).map((report) => ({
