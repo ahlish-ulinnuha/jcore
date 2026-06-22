@@ -36,7 +36,7 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
   if (!profile || profile.role === "vendor") redirect("/dashboard");
 
   const params = await searchParams;
-  const reportDate = params.date ?? todayJakarta();
+  const reportDate = todayJakarta();
   const historyDate = params.history_date ?? "";
   const historyStore = profile.role === "admin" ? params.history_store ?? "all" : profile.store_id ?? "all";
   const currentPage = Math.max(1, Number(params.page ?? 1) || 1);
@@ -121,7 +121,8 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
           <div className="filter-grid">
             <div className="field">
               <label>Tanggal</label>
-              <input name="report_date" type="date" defaultValue={reportDate} required />
+              <input name="report_date" type="hidden" value={reportDate} />
+              <input disabled type="date" value={reportDate} />
             </div>
             {profile.role === "admin" ? (
               <div className="field">

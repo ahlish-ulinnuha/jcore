@@ -99,6 +99,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
 
   const params = await searchParams;
   const date = params.date ?? todayJakarta();
+  const spiceReportDate = todayJakarta();
   const selectedVendor = params.vendor ?? "all";
   const selectedStatus = params.status ?? "all";
   const selectedRequestStatus = profile.role === "admin" ? params.request_status ?? "submitted" : "submitted";
@@ -132,7 +133,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
   const spiceQuery = supabase
     .from("daily_spice_reports")
     .select("*")
-    .eq("report_date", date);
+    .eq("report_date", spiceReportDate);
 
   if (staffStoreId) {
     spiceQuery.eq("store_id", staffStoreId);
