@@ -30,11 +30,13 @@ function shouldShowStoreNames(vendorName: string) {
 
 export function CopySummaryButton({
   date,
+  includeAllStoreTotal = true,
   outletName,
   rows,
   spiceRows,
 }: {
   date: string;
+  includeAllStoreTotal?: boolean;
   outletName: string;
   rows: SummaryRow[];
   spiceRows?: SpiceSummaryRow[];
@@ -70,7 +72,7 @@ export function CopySummaryButton({
       ? [
           "Stock Bumbu",
           ...sortedSpiceRows.map((row) => `- ${row.storeName}: merah ${formatQty(row.redSpiceStock)}, putih ${formatQty(row.whiteSpiceStock)}`),
-          `- All store: merah ${formatQty(totalRedSpice)}, putih ${formatQty(totalWhiteSpice)}`,
+          ...(includeAllStoreTotal ? [`- All store: merah ${formatQty(totalRedSpice)}, putih ${formatQty(totalWhiteSpice)}`] : []),
         ].join("\n")
       : "";
     const allSections = spiceSection ? [...sections, spiceSection] : sections;

@@ -25,6 +25,7 @@ import {
   updateStore,
   upsertProfile,
 } from "../actions";
+import { MasterSubmitButton } from "./MasterSubmitButton";
 import { SearchableSelect } from "./SearchableSelect";
 
 type Params = Promise<{ section: string }>;
@@ -283,7 +284,7 @@ function renderProducts({
           <div className="field"><label>SKU</label><input name="sku" /></div>
           <div className="field"><label>Nama Barang</label><input name="name" required /></div>
           <div className="field"><label>Unit</label><input name="unit" defaultValue="pcs" /></div>
-          <button className="button primary" type="submit">Tambah Barang</button>
+          <MasterSubmitButton label="Tambah Barang" pendingLabel="Menambah..." variant="primary" />
         </div>
       </form>
       <section className="panel">
@@ -296,7 +297,7 @@ function renderProducts({
               <td><input name="sku" form={`product-${product.id}`} defaultValue={product.sku ?? ""} /></td>
               <td><input name="unit" form={`product-${product.id}`} defaultValue={product.unit} /></td>
               <td><input name="is_active" form={`product-${product.id}`} type="checkbox" defaultChecked={product.is_active} /></td>
-              <td><div className="row-actions"><button className="button outline" form={`product-${product.id}`} type="submit">Edit</button><form action={deleteProduct}><input name="id" type="hidden" value={product.id} /><button className="button danger" type="submit">Hapus</button></form></div></td>
+              <td><div className="row-actions"><MasterSubmitButton form={`product-${product.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={deleteProduct}><input name="id" type="hidden" value={product.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td>
             </tr>
           ))}
         </tbody></table></div>
@@ -311,9 +312,9 @@ function renderStores({ active, baseParams, currentPage, pageSize, q, storeRows 
   const page = paginate(filtered, currentPage, pageSize);
   return (
     <>
-      <form className="panel form master-add-form" action={createStore}><h2>Tambah Store</h2><div className="filter-grid"><div className="field"><label>Kode</label><input name="code" placeholder="J1" /></div><div className="field"><label>Nama Store</label><input name="name" required placeholder="J1" /></div><button className="button primary" type="submit">Tambah Store</button></div></form>
+      <form className="panel form master-add-form" action={createStore}><h2>Tambah Store</h2><div className="filter-grid"><div className="field"><label>Kode</label><input name="code" placeholder="J1" /></div><div className="field"><label>Nama Store</label><input name="name" required placeholder="J1" /></div><MasterSubmitButton label="Tambah Store" pendingLabel="Menambah..." variant="primary" /></div></form>
       <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter="all" section="store" storeFilter="all" storeRows={storeRows} /><div className="table-wrap"><table><thead><tr><th>Kode</th><th>Store</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((store) => (
-        <tr key={store.id}><td><form id={`store-${store.id}`} action={updateStore} className="inline-edit-form"><input name="id" type="hidden" value={store.id} /><input name="code" defaultValue={store.code ?? ""} /></form></td><td><input name="name" form={`store-${store.id}`} defaultValue={store.name} required /></td><td><input name="is_active" form={`store-${store.id}`} type="checkbox" defaultChecked={store.is_active} /></td><td><div className="row-actions"><button className="button outline" form={`store-${store.id}`} type="submit">Edit</button><form action={deleteStore}><input name="id" type="hidden" value={store.id} /><button className="button danger" type="submit">Hapus</button></form></div></td></tr>
+        <tr key={store.id}><td><form id={`store-${store.id}`} action={updateStore} className="inline-edit-form"><input name="id" type="hidden" value={store.id} /><input name="code" defaultValue={store.code ?? ""} /></form></td><td><input name="name" form={`store-${store.id}`} defaultValue={store.name} required /></td><td><input name="is_active" form={`store-${store.id}`} type="checkbox" defaultChecked={store.is_active} /></td><td><div className="row-actions"><MasterSubmitButton form={`store-${store.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={deleteStore}><input name="id" type="hidden" value={store.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td></tr>
       ))}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
     </>
   );
@@ -324,9 +325,9 @@ function renderBrands({ active, baseParams, brandRows, currentPage, pageSize, q,
   const page = paginate(filtered, currentPage, pageSize);
   return (
     <>
-      <form className="panel form master-add-form" action={createBrand}><h2>Tambah Brand</h2><div className="filter-grid"><div className="field"><label>Nama Brand</label><input name="name" required placeholder="GOOD EAT" /></div><button className="button primary" type="submit">Tambah Brand</button></div></form>
+      <form className="panel form master-add-form" action={createBrand}><h2>Tambah Brand</h2><div className="filter-grid"><div className="field"><label>Nama Brand</label><input name="name" required placeholder="GOOD EAT" /></div><MasterSubmitButton label="Tambah Brand" pendingLabel="Menambah..." variant="primary" /></div></form>
       <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter="all" section="brand" storeFilter="all" storeRows={storeRows} /><div className="table-wrap"><table><thead><tr><th>Brand</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((brand) => (
-        <tr key={brand.id}><td><form id={`brand-${brand.id}`} action={updateBrand} className="inline-edit-form"><input name="id" type="hidden" value={brand.id} /><input name="name" defaultValue={brand.name} required /></form></td><td><input name="is_active" form={`brand-${brand.id}`} type="checkbox" defaultChecked={brand.is_active} /></td><td><div className="row-actions"><button className="button outline" form={`brand-${brand.id}`} type="submit">Edit</button><form action={deleteBrand}><input name="id" type="hidden" value={brand.id} /><button className="button danger" type="submit">Hapus</button></form></div></td></tr>
+        <tr key={brand.id}><td><form id={`brand-${brand.id}`} action={updateBrand} className="inline-edit-form"><input name="id" type="hidden" value={brand.id} /><input name="name" defaultValue={brand.name} required /></form></td><td><input name="is_active" form={`brand-${brand.id}`} type="checkbox" defaultChecked={brand.is_active} /></td><td><div className="row-actions"><MasterSubmitButton form={`brand-${brand.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={deleteBrand}><input name="id" type="hidden" value={brand.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td></tr>
       ))}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
     </>
   );
@@ -340,9 +341,9 @@ function renderMappings({ active, baseParams, currentPage, mappingRows, pageSize
   const page = paginate(filtered, currentPage, pageSize);
   return (
     <>
-      <form className="panel form master-add-form" action={createProductVendor}><h2>Tambah Mapping Vendor</h2><div className="filter-grid"><SearchableSelect label="Barang" name="product_id" options={productRows.map((product) => ({ label: productDisplayName(product), value: product.id }))} /><SearchableSelect label="Vendor" name="vendor_id" options={vendorRows.map((vendor) => ({ label: vendor.name, value: vendor.id }))} /><label className="checkbox-line"><input name="is_default" type="checkbox" />Default vendor</label><button className="button primary" type="submit">Tambah Mapping</button></div></form>
+      <form className="panel form master-add-form" action={createProductVendor}><h2>Tambah Mapping Vendor</h2><div className="filter-grid"><SearchableSelect label="Barang" name="product_id" options={productRows.map((product) => ({ label: productDisplayName(product), value: product.id }))} /><SearchableSelect label="Vendor" name="vendor_id" options={vendorRows.map((vendor) => ({ label: vendor.name, value: vendor.id }))} /><label className="checkbox-line"><input name="is_default" type="checkbox" />Default vendor</label><MasterSubmitButton label="Tambah Mapping" pendingLabel="Menambah..." variant="primary" /></div></form>
       <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="mapping-vendor" storeFilter={storeFilter} storeRows={storeRows} /><div className="table-wrap"><table><thead><tr><th>Barang</th><th>Vendor</th><th>Default</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((mapping) => (
-        <tr key={mapping.id}><td><form id={`mapping-${mapping.id}`} action={updateProductVendor} className="inline-edit-form"><input name="id" type="hidden" value={mapping.id} /><select name="product_id" defaultValue={mapping.product_id}>{productRows.map((product) => <option key={product.id} value={product.id}>{productDisplayName(product)}</option>)}</select></form></td><td><select name="vendor_id" form={`mapping-${mapping.id}`} defaultValue={mapping.vendor_id}>{vendorRows.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></td><td><input name="is_default" form={`mapping-${mapping.id}`} type="checkbox" defaultChecked={mapping.is_default} /></td><td><div className="row-actions"><button className="button outline" form={`mapping-${mapping.id}`} type="submit">Edit</button><form action={deleteProductVendor}><input name="id" type="hidden" value={mapping.id} /><button className="button danger" type="submit">Hapus</button></form></div></td></tr>
+        <tr key={mapping.id}><td><form id={`mapping-${mapping.id}`} action={updateProductVendor} className="inline-edit-form"><input name="id" type="hidden" value={mapping.id} /><select name="product_id" defaultValue={mapping.product_id}>{productRows.map((product) => <option key={product.id} value={product.id}>{productDisplayName(product)}</option>)}</select></form></td><td><select name="vendor_id" form={`mapping-${mapping.id}`} defaultValue={mapping.vendor_id}>{vendorRows.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select></td><td><input name="is_default" form={`mapping-${mapping.id}`} type="checkbox" defaultChecked={mapping.is_default} /></td><td><div className="row-actions"><MasterSubmitButton form={`mapping-${mapping.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={deleteProductVendor}><input name="id" type="hidden" value={mapping.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td></tr>
       ))}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
     </>
   );
@@ -395,7 +396,7 @@ function renderAliases({
           <SearchableSelect label="Barang Internal" name="product_id" options={productRows.map((product) => ({ label: productDisplayName(product), value: product.id }))} />
           <SearchableSelect label="Vendor" name="vendor_id" options={vendorRows.map((vendor) => ({ label: vendor.name, value: vendor.id }))} />
           <div className="field"><label>Catatan</label><input name="notes" placeholder="Opsional" /></div>
-          <button className="button primary" type="submit">Tambah Alias</button>
+          <MasterSubmitButton label="Tambah Alias" pendingLabel="Menambah..." variant="primary" />
         </div>
       </form>
       <section className="panel">
@@ -409,7 +410,7 @@ function renderAliases({
               <td>{alias.normalized_alias_name}</td>
               <td><input name="is_active" form={`alias-${alias.id}`} type="checkbox" defaultChecked={alias.is_active} /></td>
               <td><input name="notes" form={`alias-${alias.id}`} defaultValue={alias.notes ?? ""} /></td>
-              <td><div className="row-actions"><button className="button outline" form={`alias-${alias.id}`} type="submit">Edit</button><form action={deleteProductVendorAlias}><input name="id" type="hidden" value={alias.id} /><button className="button danger" type="submit">Hapus</button></form></div></td>
+              <td><div className="row-actions"><MasterSubmitButton form={`alias-${alias.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={deleteProductVendorAlias}><input name="id" type="hidden" value={alias.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td>
             </tr>
           ))}
         </tbody></table></div>
@@ -459,7 +460,7 @@ function renderVendorPrices({
           <SearchableSelect label="Barang" name="product_id" options={productRows.map((product) => ({ label: productDisplayName(product), value: product.id }))} />
           <SearchableSelect label="Vendor" name="vendor_id" options={vendorRows.map((vendor) => ({ label: vendor.name, value: vendor.id }))} />
           <div className="field"><label>Harga Terbaru</label><input min="0" name="current_price" required step="1" type="number" /></div>
-          <button className="button primary" type="submit">Update Harga</button>
+          <MasterSubmitButton label="Update Harga" pendingLabel="Menyimpan..." variant="primary" />
         </div>
       </form>
 
@@ -514,9 +515,9 @@ function renderUsers({ active, baseParams, currentPage, pageSize, profileRows, q
   const page = paginate(filtered, currentPage, pageSize);
   return (
     <>
-      <form className="panel form master-add-form" action={upsertProfile}><h2>Tambah User</h2><p className="muted">Buat email/password user dulu di Supabase Authentication, lalu paste User UID di sini.</p><div className="filter-grid"><div className="field"><label>User UID</label><input name="id" required /></div><div className="field"><label>Email</label><input name="email" type="email" required /></div><div className="field"><label>Nama</label><input name="full_name" required /></div><div className="field"><label>Role</label><select name="role" defaultValue="staff"><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></div><div className="field"><label>Store</label><select name="store_id"><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></div><button className="button primary" type="submit">Tambah User</button></div></form>
-      <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="user" storeFilter={storeFilter} storeRows={storeRows} /><form action={resetAllProfilePasswords} className="table-toolbar"><button className="button outline" type="submit">Reset Password Semua User</button></form><div className="table-wrap"><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Store</th><th>User ID</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((row) => (
-        <tr key={row.id}><td><form id={`profile-${row.id}`} action={upsertProfile} className="inline-edit-form"><input name="id" type="hidden" value={row.id} /><input name="full_name" defaultValue={row.full_name} required /></form></td><td><input name="email" form={`profile-${row.id}`} defaultValue={row.email ?? ""} type="email" /></td><td><select name="role" form={`profile-${row.id}`} defaultValue={row.role}><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></td><td><select name="store_id" form={`profile-${row.id}`} defaultValue={row.store_id ?? ""}><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></td><td>{row.id}</td><td><div className="row-actions"><button className="button outline" form={`profile-${row.id}`} type="submit">Edit</button><form action={resetProfilePassword}><input name="email" type="hidden" value={row.email ?? ""} /><button className="button outline" disabled={!row.email} type="submit" title="Reset password">Reset Password</button></form><form action={deleteProfile}><input name="id" type="hidden" value={row.id} /><button className="button danger" type="submit">Hapus</button></form></div></td></tr>
+      <form className="panel form master-add-form" action={upsertProfile}><h2>Tambah User</h2><p className="muted">Buat email/password user dulu di Supabase Authentication, lalu paste User UID di sini.</p><div className="filter-grid"><div className="field"><label>User UID</label><input name="id" required /></div><div className="field"><label>Email</label><input name="email" type="email" required /></div><div className="field"><label>Nama</label><input name="full_name" required /></div><div className="field"><label>Role</label><select name="role" defaultValue="staff"><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></div><div className="field"><label>Store</label><select name="store_id"><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></div><MasterSubmitButton label="Tambah User" pendingLabel="Menambah..." variant="primary" /></div></form>
+      <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="user" storeFilter={storeFilter} storeRows={storeRows} /><form action={resetAllProfilePasswords} className="table-toolbar"><MasterSubmitButton label="Reset Password Semua User" pendingLabel="Mereset..." /></form><div className="table-wrap"><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Store</th><th>User ID</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((row) => (
+        <tr key={row.id}><td><form id={`profile-${row.id}`} action={upsertProfile} className="inline-edit-form"><input name="id" type="hidden" value={row.id} /><input name="full_name" defaultValue={row.full_name} required /></form></td><td><input name="email" form={`profile-${row.id}`} defaultValue={row.email ?? ""} type="email" /></td><td><select name="role" form={`profile-${row.id}`} defaultValue={row.role}><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></td><td><select name="store_id" form={`profile-${row.id}`} defaultValue={row.store_id ?? ""}><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></td><td>{row.id}</td><td><div className="row-actions"><MasterSubmitButton form={`profile-${row.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={resetProfilePassword}><input name="email" type="hidden" value={row.email ?? ""} /><MasterSubmitButton disabled={!row.email} label="Reset Password" pendingLabel="Mereset..." title="Reset password" /></form><form action={deleteProfile}><input name="id" type="hidden" value={row.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td></tr>
       ))}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
     </>
   );

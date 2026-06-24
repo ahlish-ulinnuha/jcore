@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, PurchaseRequest } from "@/lib/types";
+import { RequestStatusForm } from "./RequestStatusForm";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -29,7 +30,7 @@ function displayDate(value: string) {
   return `${day}-${month}-${year}`;
 }
 
-type SearchParams = Promise<{ date_from?: string; date_to?: string }>;
+type SearchParams = Promise<{ date_from?: string; date_to?: string; updated?: string }>;
 
 export default async function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
   const supabase = await createClient();
@@ -50,6 +51,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
   const params = await searchParams;
   const dateFrom = params.date_from ?? today;
   const dateTo = params.date_to ?? tomorrow;
+  const currentParams = new URLSearchParams();
+  currentParams.set("date_from", dateFrom);
+  currentParams.set("date_to", dateTo);
+  const currentPath = `/dashboard?${currentParams}`;
   const staffStoreId = profile.role === "staff" ? profile.store_id : null;
 
   const requestCountQuery = supabase
@@ -113,6 +118,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>
+        {params.updated === "1" ? <div className="toast submit">Status request berhasil diubah.</div> : null}
         <div className="page-head compact">
           <div>
             <h2>Request</h2>
@@ -158,9 +164,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
                     <span className={`badge ${request.status}`}>{request.status}</span>
                   </td>
                   <td>
-                    <Link className="button" href={`/requests/${request.id}/edit`}>
-                      {request.status === "draft" ? "Edit Draft" : "Lihat"}
-                    </Link>
+                    <div className="row-actions">
+                      {profile.role === "admin" ? <RequestStatusForm currentPath={currentPath} request={request} /> : null}
+                      <Link className="button" href={`/requests/${request.id}/edit`}>
+                        {request.status === "draft" ? "Edit Draft" : "Lihat"}
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

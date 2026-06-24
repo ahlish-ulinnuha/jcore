@@ -31,3 +31,17 @@ export async function deletePurchaseRequest(formData: FormData) {
   revalidatePath("/reports/daily");
   redirect("/dashboard?deleted=1");
 }
+
+export async function updatePurchaseRequestStatus(formData: FormData) {
+  const supabase = await requireAdmin();
+  const id = text(formData, "id");
+  const status = text(formData, "status");
+  const redirectTo = text(formData, "redirect_to") || "/dashboard";
+  const allowedStatuses = ["draft", "submitted", "cancelled"];
+  if (!id || !allowedStatuses.includes(status)) redirect(redirectTo);
+
+  await supabase.from("purchase_requests").update({ status }).eq("id", id);
+  revalidatePath("/dashboard");
+  revalidatePath("/reports/daily");
+  redirect(`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}updated=1`);
+}

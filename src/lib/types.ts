@@ -119,6 +119,8 @@ export type PurchaseRequestItem = {
   product_id: string;
   vendor_id: string;
   qty: number;
+  purchased_qty: number | null;
+  purchase_price: number | null;
   unit: string;
   status: "requested" | "confirmed" | "unavailable" | "partially_available" | "fulfilled" | "cancelled";
   vendor_note: string | null;
@@ -126,6 +128,18 @@ export type PurchaseRequestItem = {
   products?: Product | null;
   vendors?: Vendor | null;
   purchase_requests?: PurchaseRequest | null;
+};
+
+export type VendorReceipt = {
+  id: string;
+  vendor_id: string;
+  request_date: string;
+  receipt_url: string;
+  file_name: string | null;
+  notes: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+  vendors?: Vendor | null;
 };
 
 export type DailySpiceReport = {

@@ -139,7 +139,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     spiceQuery.eq("store_id", staffStoreId);
   }
 
-  if (profile.role !== "admin" && selectedStore !== "all") {
+  if (profile.role === "admin" && selectedStore !== "all") {
     spiceQuery.eq("store_id", selectedStore);
   }
 
@@ -295,6 +295,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         <div className="filter-actions">
           <CopySummaryButton
             date={date}
+            includeAllStoreTotal={profile.role === "admin"}
             outletName={selectedStoreName}
             rows={reportRows.map((row) => ({
               productName: row.summaryProductName,

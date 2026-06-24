@@ -230,6 +230,26 @@ textarea {
   color: #fff;
 }
 
+.button.primary.saving,
+.button.primary:disabled {
+  background: #d9aaa9;
+  border-color: #d9aaa9;
+  box-shadow: none;
+  color: #fff;
+}
+
+.button.outline.saving {
+  background: #f3dfde;
+  border-color: #e2b9b8;
+  color: var(--primary);
+}
+
+.button.danger.saving {
+  background: #f0caca;
+  border-color: #e1aaaa;
+  color: var(--danger);
+}
+
 .button.danger {
   background: var(--primary-soft);
   color: var(--danger);
@@ -1409,6 +1429,97 @@ th {
   justify-content: flex-end;
 }
 
+.request-status-form {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.request-status-form select {
+  min-height: 36px;
+  min-width: 118px;
+}
+
+.request-status-form .button {
+  min-height: 36px;
+  padding: 8px 12px;
+}
+
+.admin-vendor-list {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-vendor-group {
+  overflow: hidden;
+}
+
+.admin-vendor-head {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.admin-vendor-head h2 {
+  color: var(--primary);
+  font-size: 22px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.upload-button {
+  cursor: pointer;
+  position: relative;
+}
+
+.upload-button input {
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+}
+
+.receipt-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.receipt-list a {
+  align-items: center;
+  background: #fffafa;
+  border: 1px solid #efe7e6;
+  border-radius: 999px;
+  color: var(--primary);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  padding: 7px 10px;
+  text-decoration: none;
+}
+
+.receipt-list a:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.receipt-list a span {
+  color: inherit;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.admin-vendor-table input,
+.admin-vendor-table select {
+  min-width: 105px;
+}
+
 .checkbox-line {
   align-items: center;
   color: var(--muted);
@@ -2148,5 +2259,42 @@ th {
     min-height: 34px;
     padding: 8px 10px;
     white-space: nowrap;
+  }
+
+  .admin-vendor-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-vendor-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-vendor-table {
+    display: table;
+    min-width: 980px;
+  }
+
+  .admin-vendor-table thead {
+    display: table-header-group;
+  }
+
+  .admin-vendor-table tbody {
+    display: table-row-group;
+  }
+
+  .admin-vendor-table tr {
+    display: table-row;
+  }
+
+  .admin-vendor-table th,
+  .admin-vendor-table td {
+    display: table-cell;
+    white-space: nowrap;
+  }
+
+  .admin-vendor-table td::before {
+    content: none;
   }
 }

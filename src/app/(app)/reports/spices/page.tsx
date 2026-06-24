@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { DailySpiceReport, Profile, Store } from "@/lib/types";
 import { deleteDailySpiceReport, saveDailySpiceReport } from "./actions";
+import { SpiceSubmitButton } from "./SpiceSubmitButton";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -175,9 +176,7 @@ export default async function DailySpiceReportPage({ searchParams }: { searchPar
           </div>
 
           <div className="row-actions">
-            <button className="button primary" type="submit">
-              Simpan Report Bumbu
-            </button>
+            <SpiceSubmitButton />
           </div>
         </form>
       </section>
