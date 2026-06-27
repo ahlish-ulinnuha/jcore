@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { allMenuItems } from "@/lib/menu-access";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 
@@ -20,6 +21,10 @@ async function requireAdmin() {
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function checked(formData: FormData, key: string) {
+  return formData.getAll(key).some((value) => ["1", "on", "true"].includes(String(value)));
 }
 
 function normalizeAlias(value: string) {
@@ -57,7 +62,7 @@ export async function updateStore(formData: FormData) {
     .update({
       name: text(formData, "name"),
       code: text(formData, "code") || null,
-      is_active: formData.get("is_active") === "on",
+      is_active: checked(formData, "is_active"),
     })
     .eq("id", text(formData, "id"));
   revalidatePath("/admin/master");
@@ -81,7 +86,7 @@ export async function updateBrand(formData: FormData) {
     .from("brands")
     .update({
       name: text(formData, "name"),
-      is_active: formData.get("is_active") === "on",
+      is_active: checked(formData, "is_active"),
     })
     .eq("id", text(formData, "id"));
   revalidatePath("/admin/master");
@@ -116,10 +121,14 @@ export async function updateProduct(formData: FormData) {
       sku: text(formData, "sku") || null,
       name: text(formData, "name"),
       unit: text(formData, "unit") || "pcs",
-      is_active: formData.get("is_active") === "on",
+      is_active: checked(formData, "is_active"),
     })
     .eq("id", text(formData, "id"));
   revalidatePath("/admin/master");
+  revalidatePath("/admin/master/barang");
+  revalidatePath("/requests/new");
+  revalidatePath("/requests/[id]/edit", "page");
+  await redirectWithToast("Barang berhasil diubah.", "submit");
 }
 
 export async function deleteProduct(formData: FormData) {
@@ -130,18 +139,54 @@ export async function deleteProduct(formData: FormData) {
 
 export async function upsertProfile(formData: FormData) {
   const supabase = await requireAdmin();
+  const profileId = text(formData, "id");
   const storeId = text(formData, "store_id");
   const { data: store } = storeId ? await supabase.from("stores").select("name").eq("id", storeId).single() : { data: null };
 
   await supabase.from("profiles").upsert({
-    id: text(formData, "id"),
+    id: profileId,
     email: text(formData, "email") || null,
     full_name: text(formData, "full_name"),
     role: text(formData, "role"),
     store_id: storeId || null,
     store_name: store?.name ?? null,
   });
+
+  if (formData.get("menu_access_form") === "1") {
+    const selectedMenuKeys = new Set(formData.getAll("menu_access").map((value) => String(value)));
+    await supabase.from("profile_menu_access").upsert(
+      allMenuItems.map((item) => ({
+        can_access: selectedMenuKeys.has(item.key),
+        menu_key: item.key,
+        profile_id: profileId,
+      })),
+      { onConflict: "profile_id,menu_key" },
+    );
+  }
+
   revalidatePath("/admin/master");
+  revalidatePath("/admin/master/user");
+  revalidatePath("/", "layout");
+}
+
+export async function updateProfileMenuAccess(formData: FormData) {
+  const supabase = await requireAdmin();
+  const profileId = text(formData, "profile_id");
+  if (!profileId) return;
+
+  const selectedMenuKeys = new Set(formData.getAll("menu_access").map((value) => String(value)));
+  const { error } = await supabase.from("profile_menu_access").upsert(
+    allMenuItems.map((item) => ({
+      can_access: selectedMenuKeys.has(item.key),
+      menu_key: item.key,
+      profile_id: profileId,
+    })),
+    { onConflict: "profile_id,menu_key" },
+  );
+
+  revalidatePath("/admin/master/user");
+  revalidatePath("/", "layout");
+  await redirectWithToast(error ? `Akses menu gagal disimpan: ${error.message}` : "Akses menu berhasil disimpan.", error ? "delete" : "submit");
 }
 
 export async function resetProfilePassword(formData: FormData) {
@@ -175,7 +220,7 @@ export async function createProductVendor(formData: FormData) {
       {
         product_id: text(formData, "product_id"),
         vendor_id: text(formData, "vendor_id"),
-        is_default: formData.get("is_default") === "on",
+        is_default: checked(formData, "is_default"),
       },
       { onConflict: "product_id,vendor_id" },
     );
@@ -190,7 +235,7 @@ export async function updateProductVendor(formData: FormData) {
     .update({
       product_id: text(formData, "product_id"),
       vendor_id: text(formData, "vendor_id"),
-      is_default: formData.get("is_default") === "on",
+      is_default: checked(formData, "is_default"),
     })
     .eq("id", text(formData, "id"));
   revalidatePath("/admin/master");
@@ -263,7 +308,7 @@ export async function updateProductVendorAlias(formData: FormData) {
       notes: text(formData, "notes") || null,
       product_id: productId,
       vendor_id: vendorId,
-      is_active: formData.get("is_active") === "on",
+      is_active: checked(formData, "is_active"),
       updated_by: user?.id ?? null,
     })
     .eq("id", text(formData, "id"));

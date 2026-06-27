@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
-import type { Brand, Product, ProductPriceHistory, ProductVendor, ProductVendorAlias, ProductVendorPrice, Profile, Store, Vendor } from "@/lib/types";
+import { allMenuItems, defaultMenuKeysForRole } from "@/lib/menu-access";
+import type { Brand, Product, ProductPriceHistory, ProductVendor, ProductVendorAlias, ProductVendorPrice, Profile, ProfileMenuAccess, Role, Store, Vendor } from "@/lib/types";
 import {
   createBrand,
   createProduct,
@@ -22,6 +23,7 @@ import {
   updateProductVendorAlias,
   updateProductVendorPrice,
   updateProductVendor,
+  updateProfileMenuAccess,
   updateStore,
   upsertProfile,
 } from "../actions";
@@ -74,6 +76,32 @@ function filterActive<T extends { is_active: boolean }>(rows: T[], active: strin
   if (active === "active") return rows.filter((row) => row.is_active);
   if (active === "inactive") return rows.filter((row) => !row.is_active);
   return rows;
+}
+
+function menuKeysForProfileAccess(profileId: string, role: Role, menuAccessRows: ProfileMenuAccess[]) {
+  const rows = menuAccessRows.filter((row) => row.profile_id === profileId);
+  if (rows.length === 0) return new Set(defaultMenuKeysForRole(role));
+  return new Set(rows.filter((row) => row.can_access).map((row) => row.menu_key));
+}
+
+function MenuAccessFields({
+  checkedKeys,
+  formId,
+}: {
+  checkedKeys: Set<string>;
+  formId?: string;
+}) {
+  return (
+    <div className="menu-access-grid">
+      <input form={formId} name="menu_access_form" type="hidden" value="1" />
+      {allMenuItems.map((item) => (
+        <label className="menu-access-option" key={item.key}>
+          <input defaultChecked={checkedKeys.has(item.key)} form={formId} name="menu_access" type="checkbox" value={item.key} />
+          <span>{item.label}</span>
+        </label>
+      ))}
+    </div>
+  );
 }
 
 function Pagination({ currentPage, params, totalPages }: { currentPage: number; params: URLSearchParams; totalPages: number }) {
@@ -204,13 +232,14 @@ export default async function MasterSectionPage({ params, searchParams }: { para
   if (storeFilter !== "all") baseParams.set("store", storeFilter);
   baseParams.set("page_size", String(pageSize));
 
-  const [{ data: stores }, { data: brands }, { data: products }, { data: vendors }, { data: profiles }, { data: mappings }, { data: aliases }, { data: prices }, { data: priceHistory }] =
+  const [{ data: stores }, { data: brands }, { data: products }, { data: vendors }, { data: profiles }, { data: menuAccess }, { data: mappings }, { data: aliases }, { data: prices }, { data: priceHistory }] =
     await Promise.all([
       supabase.from("stores").select("*").order("name").returns<Store[]>(),
       supabase.from("brands").select("*").order("name").returns<Brand[]>(),
       supabase.from("products").select("*, brands(*)").order("name").returns<Product[]>(),
       supabase.from("vendors").select("*").order("name").returns<Vendor[]>(),
       supabase.from("profiles").select("*, stores(*)").order("full_name").returns<Profile[]>(),
+      supabase.from("profile_menu_access").select("*").returns<ProfileMenuAccess[]>(),
       supabase.from("product_vendors").select("*, products(*, brands(*)), vendors(*)").order("created_at", { ascending: false }).returns<ProductVendorRow[]>(),
       supabase.from("product_vendor_aliases").select("*, products(*, brands(*)), vendors(*)").order("updated_at", { ascending: false }).returns<ProductVendorAliasRow[]>(),
       supabase.from("product_vendor_prices").select("*, products(*, brands(*)), vendors(*)").order("updated_at", { ascending: false }).returns<ProductVendorPriceRow[]>(),
@@ -222,6 +251,7 @@ export default async function MasterSectionPage({ params, searchParams }: { para
   const productRows = products ?? [];
   const vendorRows = vendors ?? [];
   const profileRows = profiles ?? [];
+  const menuAccessRows = menuAccess ?? [];
   const mappingRows = mappings ?? [];
   const aliasRows = aliases ?? [];
   const priceRows = prices ?? [];
@@ -245,7 +275,7 @@ export default async function MasterSectionPage({ params, searchParams }: { para
       {sectionParam === "mapping-vendor" ? renderMappings({ active, baseParams, currentPage, mappingRows, pageSize, productRows, q, roleFilter, storeFilter, storeRows, vendorRows }) : null}
       {sectionParam === "alias-vendor" ? renderAliases({ active, aliasRows, baseParams, currentPage, pageSize, productRows, q, roleFilter, storeFilter, storeRows, vendorRows }) : null}
       {sectionParam === "harga-vendor" ? renderVendorPrices({ baseParams, currentPage, pageSize, priceHistoryRows, priceRows, productRows, q, roleFilter, storeFilter, storeRows, vendorRows }) : null}
-      {sectionParam === "user" ? renderUsers({ active, baseParams, currentPage, pageSize, profileRows, q, roleFilter, storeFilter, storeRows }) : null}
+      {sectionParam === "user" ? renderUsers({ active, baseParams, currentPage, menuAccessRows, pageSize, profileRows, q, roleFilter, storeFilter, storeRows }) : null}
     </>
   );
 }
@@ -296,7 +326,7 @@ function renderProducts({
               <td><select name="brand_id" form={`product-${product.id}`} defaultValue={product.brand_id ?? ""}><option value="">Tanpa brand</option>{brandRows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></td>
               <td><input name="sku" form={`product-${product.id}`} defaultValue={product.sku ?? ""} /></td>
               <td><input name="unit" form={`product-${product.id}`} defaultValue={product.unit} /></td>
-              <td><input name="is_active" form={`product-${product.id}`} type="checkbox" defaultChecked={product.is_active} /></td>
+              <td><input name="is_active" form={`product-${product.id}`} type="hidden" value="false" /><input name="is_active" form={`product-${product.id}`} type="checkbox" defaultChecked={product.is_active} /></td>
               <td><div className="row-actions"><MasterSubmitButton form={`product-${product.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={deleteProduct}><input name="id" type="hidden" value={product.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td>
             </tr>
           ))}
@@ -504,7 +534,7 @@ function renderVendorPrices({
   );
 }
 
-function renderUsers({ active, baseParams, currentPage, pageSize, profileRows, q, roleFilter, storeFilter, storeRows }: { active: string; baseParams: URLSearchParams; currentPage: number; pageSize: number; profileRows: Profile[]; q: string; roleFilter: string; storeFilter: string; storeRows: Store[] }) {
+function renderUsers({ active, baseParams, currentPage, menuAccessRows, pageSize, profileRows, q, roleFilter, storeFilter, storeRows }: { active: string; baseParams: URLSearchParams; currentPage: number; menuAccessRows: ProfileMenuAccess[]; pageSize: number; profileRows: Profile[]; q: string; roleFilter: string; storeFilter: string; storeRows: Store[] }) {
   const filtered = profileRows.filter((profile) => {
     const text = [profile.full_name, profile.email ?? "", profile.role, profile.id, profile.stores?.name ?? profile.store_name ?? ""].join(" ").toLowerCase();
     const matchesSearch = !q || text.includes(q);
@@ -513,12 +543,16 @@ function renderUsers({ active, baseParams, currentPage, pageSize, profileRows, q
     return matchesSearch && matchesRole && matchesStore;
   });
   const page = paginate(filtered, currentPage, pageSize);
+  const defaultNewUserMenuKeys = new Set(defaultMenuKeysForRole("staff"));
   return (
     <>
-      <form className="panel form master-add-form" action={upsertProfile}><h2>Tambah User</h2><p className="muted">Buat email/password user dulu di Supabase Authentication, lalu paste User UID di sini.</p><div className="filter-grid"><div className="field"><label>User UID</label><input name="id" required /></div><div className="field"><label>Email</label><input name="email" type="email" required /></div><div className="field"><label>Nama</label><input name="full_name" required /></div><div className="field"><label>Role</label><select name="role" defaultValue="staff"><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></div><div className="field"><label>Store</label><select name="store_id"><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></div><MasterSubmitButton label="Tambah User" pendingLabel="Menambah..." variant="primary" /></div></form>
-      <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="user" storeFilter={storeFilter} storeRows={storeRows} /><form action={resetAllProfilePasswords} className="table-toolbar"><MasterSubmitButton label="Reset Password Semua User" pendingLabel="Mereset..." /></form><div className="table-wrap"><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Store</th><th>User ID</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((row) => (
-        <tr key={row.id}><td><form id={`profile-${row.id}`} action={upsertProfile} className="inline-edit-form"><input name="id" type="hidden" value={row.id} /><input name="full_name" defaultValue={row.full_name} required /></form></td><td><input name="email" form={`profile-${row.id}`} defaultValue={row.email ?? ""} type="email" /></td><td><select name="role" form={`profile-${row.id}`} defaultValue={row.role}><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></td><td><select name="store_id" form={`profile-${row.id}`} defaultValue={row.store_id ?? ""}><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></td><td>{row.id}</td><td><div className="row-actions"><MasterSubmitButton form={`profile-${row.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={resetProfilePassword}><input name="email" type="hidden" value={row.email ?? ""} /><MasterSubmitButton disabled={!row.email} label="Reset Password" pendingLabel="Mereset..." title="Reset password" /></form><form action={deleteProfile}><input name="id" type="hidden" value={row.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td></tr>
-      ))}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
+      <form className="panel form master-add-form" action={upsertProfile}><h2>Tambah User</h2><p className="muted">Buat email/password user dulu di Supabase Authentication, lalu paste User UID di sini.</p><div className="filter-grid"><div className="field"><label>User UID</label><input name="id" required /></div><div className="field"><label>Email</label><input name="email" type="email" required /></div><div className="field"><label>Nama</label><input name="full_name" required /></div><div className="field"><label>Role</label><select name="role" defaultValue="staff"><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></div><div className="field"><label>Store</label><select name="store_id"><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></div><MasterSubmitButton label="Tambah User" pendingLabel="Menambah..." variant="primary" /></div><h3>Akses Menu</h3><MenuAccessFields checkedKeys={defaultNewUserMenuKeys} /></form>
+      <section className="panel"><MasterFilter active={active} pageSize={pageSize} q={q} roleFilter={roleFilter} section="user" storeFilter={storeFilter} storeRows={storeRows} /><form action={resetAllProfilePasswords} className="table-toolbar"><MasterSubmitButton label="Reset Password Semua User" pendingLabel="Mereset..." /></form><div className="table-wrap"><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Store</th><th>Akses Menu</th><th>User ID</th><th>Aksi</th></tr></thead><tbody>{page.rows.map((row) => {
+        const formId = `profile-${row.id}`;
+        const checkedKeys = menuKeysForProfileAccess(row.id, row.role, menuAccessRows);
+        return (
+        <tr key={row.id}><td><form id={formId} action={upsertProfile} className="inline-edit-form"><input name="id" type="hidden" value={row.id} /><input name="full_name" defaultValue={row.full_name} required /></form></td><td><input name="email" form={formId} defaultValue={row.email ?? ""} type="email" /></td><td><select name="role" form={formId} defaultValue={row.role}><option value="admin">admin</option><option value="staff">staff</option><option value="vendor">vendor</option></select></td><td><select name="store_id" form={formId} defaultValue={row.store_id ?? ""}><option value="">Tidak ada</option>{storeRows.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></td><td><form action={updateProfileMenuAccess} className="menu-access-form"><input name="profile_id" type="hidden" value={row.id} /><MenuAccessFields checkedKeys={checkedKeys} /><MasterSubmitButton label="Simpan Akses" pendingLabel="Menyimpan..." /></form></td><td>{row.id}</td><td><div className="row-actions"><MasterSubmitButton form={formId} label="Edit" pendingLabel="Menyimpan..." /><form action={resetProfilePassword}><input name="email" type="hidden" value={row.email ?? ""} /><MasterSubmitButton disabled={!row.email} label="Reset Password" pendingLabel="Mereset..." title="Reset password" /></form><form action={deleteProfile}><input name="id" type="hidden" value={row.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td></tr>
+      );})}</tbody></table></div><Pagination currentPage={page.currentPage} params={baseParams} totalPages={page.totalPages} /></section>
     </>
   );
 }

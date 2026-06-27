@@ -2,27 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { hasAnyMasterMenuAccess, hasMenuAccess, mainMenuItems, masterMenuItems } from "@/lib/menu-access";
 import type { Role } from "@/lib/types";
-
-const links: Array<{ href: string; label: string; roles: Role[] }> = [
-  { href: "/dashboard", label: "Dashboard", roles: ["admin", "staff"] },
-  { href: "/requests/new", label: "Request Baru", roles: ["admin", "staff"] },
-  { href: "/reports/daily", label: "Report Harian", roles: ["admin", "staff"] },
-  { href: "/reports/spices", label: "Report Bumbu", roles: ["admin", "staff"] },
-  { href: "/reports/sales", label: "Report Sales", roles: ["admin", "staff"] },
-  { href: "/admin/vendor", label: "Vendor", roles: ["admin"] },
-  { href: "/vendor", label: "Vendor", roles: ["vendor"] },
-];
-
-const masterLinks = [
-  { href: "/admin/master/barang", label: "Barang" },
-  { href: "/admin/master/store", label: "Store" },
-  { href: "/admin/master/brand", label: "Brand" },
-  { href: "/admin/master/mapping-vendor", label: "Mapping Vendor" },
-  { href: "/admin/master/alias-vendor", label: "Alias Vendor" },
-  { href: "/admin/master/harga-vendor", label: "Harga Vendor" },
-  { href: "/admin/master/user", label: "User" },
-];
 
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -30,25 +11,58 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-export function NavLinks({ role }: { role: Role }) {
+const adminReportMenu = [
+  { key: "report_daily", label: "Report Harian" },
+  { key: "report_spices", label: "Report Bumbu" },
+  { key: "report_sales", label: "Report Sales" },
+  { key: "shopping", label: "Report Belanja" },
+  { key: "admin_vendor", label: "Report Vendor" },
+];
+
+export function NavLinks({ allowedMenuKeys, role }: { allowedMenuKeys: string[]; role: Role }) {
   const pathname = usePathname();
+  const visibleMainLinks = mainMenuItems.filter((link) => hasMenuAccess(link.key, allowedMenuKeys));
+  const visibleMasterLinks = masterMenuItems.filter((link) => hasMenuAccess(link.key, allowedMenuKeys));
+  const visibleAdminReportLinks = role === "admin"
+    ? adminReportMenu
+        .map((item) => {
+          const link = mainMenuItems.find((menuItem) => menuItem.key === item.key);
+          return link && hasMenuAccess(link.key, allowedMenuKeys) ? { ...link, label: item.label } : null;
+        })
+        .filter((link): link is NonNullable<typeof link> => Boolean(link))
+    : [];
+  const visibleTopLinks = role === "admin"
+    ? visibleMainLinks.filter((link) => !adminReportMenu.some((item) => item.key === link.key))
+    : visibleMainLinks;
 
   return (
     <>
-      {links
-        .filter((link) => link.roles.includes(role))
-        .map((link) => (
+      {visibleTopLinks.map((link) => (
           <Link className={isActive(pathname, link.href) ? "active" : undefined} href={link.href} key={link.href}>
             {link.label}
           </Link>
         ))}
-      {role === "admin" ? (
+      {visibleAdminReportLinks.length ? (
+        <div className="nav-dropdown">
+          <Link className={visibleAdminReportLinks.some((link) => isActive(pathname, link.href)) ? "active" : undefined} href={visibleAdminReportLinks[0].href}>
+            Report
+          </Link>
+          <div className="nav-dropdown-menu">
+            {visibleAdminReportLinks.map((link) => (
+              <Link className={isActive(pathname, link.href) ? "active" : undefined} href={link.href} key={link.href}>
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {role === "admin" && hasAnyMasterMenuAccess(allowedMenuKeys) ? (
         <div className="nav-dropdown">
           <Link className={pathname.startsWith("/admin/master") ? "active" : undefined} href="/admin/master">
             Master Data
           </Link>
           <div className="nav-dropdown-menu">
-            {masterLinks.map((link) => (
+            {visibleMasterLinks.map((link) => (
               <Link className={pathname === link.href ? "active" : undefined} href={link.href} key={link.href}>
                 {link.label}
               </Link>

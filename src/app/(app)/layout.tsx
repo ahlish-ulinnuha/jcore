@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { allowedMenuKeysForRole, firstAccessibleHref, hasAnyMasterMenuAccess, hasMenuAccess } from "@/lib/menu-access";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./actions";
-import type { Profile } from "@/lib/types";
+import type { Profile, ProfileMenuAccess } from "@/lib/types";
 import { NavLinks } from "./NavLinks";
 import { ResponsiveTables } from "./ResponsiveTables";
 import { NavigationLoading } from "./NavigationLoading";
@@ -57,31 +58,40 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     profile.email = user.email;
   }
 
+  const { data: menuAccessRows } = await supabase
+    .from("profile_menu_access")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .returns<ProfileMenuAccess[]>();
+  const allowedMenuKeys = allowedMenuKeysForRole(profile.role, menuAccessRows ?? []);
+  const homeHref = firstAccessibleHref(profile.role, allowedMenuKeys);
+
   return (
     <div className="shell">
       <aside className="sidebar" aria-label="Navigasi cepat">
-        <Link className="sidebar-mark" href="/dashboard" title="Dashboard">
+        <Link aria-label="JCore" className="sidebar-mark" data-tooltip="JCore" href={homeHref} title="JCore">
           JC
         </Link>
-        <Link href="/dashboard" title="Dashboard">⌘</Link>
-        {profile.role !== "vendor" ? <Link href="/requests/new" title="Request Baru">＋</Link> : null}
-        {profile.role !== "vendor" ? <Link href="/reports/daily" title="Report Harian">▣</Link> : null}
-        {profile.role !== "vendor" ? <Link href="/reports/spices" title="Report Bumbu">◐</Link> : null}
-        {profile.role !== "vendor" ? <Link href="/reports/sales" title="Report Sales">Rp</Link> : null}
-        {profile.role === "admin" ? <Link href="/admin/master" title="Master Data">⚙</Link> : null}
-        {profile.role === "vendor" ? <Link href="/vendor" title="Vendor">✓</Link> : null}
+        {hasMenuAccess("dashboard", allowedMenuKeys) ? <Link aria-label="Dashboard" data-tooltip="Dashboard" href="/dashboard" title="Dashboard">⌘</Link> : null}
+        {hasMenuAccess("requests", allowedMenuKeys) ? <Link aria-label="Request Baru" data-tooltip="Request Baru" href="/requests/new" title="Request Baru">＋</Link> : null}
+        {hasMenuAccess("report_daily", allowedMenuKeys) ? <Link aria-label="Report Harian" data-tooltip="Report Harian" href="/reports/daily" title="Report Harian">▣</Link> : null}
+        {hasMenuAccess("report_spices", allowedMenuKeys) ? <Link aria-label="Report Bumbu" data-tooltip="Report Bumbu" href="/reports/spices" title="Report Bumbu">◐</Link> : null}
+        {hasMenuAccess("report_sales", allowedMenuKeys) ? <Link aria-label="Report Sales" data-tooltip="Report Sales" href="/reports/sales" title="Report Sales">Rp</Link> : null}
+        {hasMenuAccess("shopping", allowedMenuKeys) ? <Link aria-label="Belanja" data-tooltip="Belanja" href="/shopping" title="Belanja">$</Link> : null}
+        {hasAnyMasterMenuAccess(allowedMenuKeys) ? <Link aria-label="Master Data" data-tooltip="Master Data" href="/admin/master" title="Master Data">⚙</Link> : null}
+        {hasMenuAccess("vendor_portal", allowedMenuKeys) ? <Link aria-label="Vendor" data-tooltip="Vendor" href="/vendor" title="Vendor">✓</Link> : null}
         <form action={signOut} className="sidebar-bottom">
-          <button type="submit" title="Keluar">↪</button>
+          <button aria-label="Keluar" data-tooltip="Keluar" type="submit" title="Keluar">↪</button>
         </form>
       </aside>
       <div className="app-frame">
         <header className="topbar">
-          <Link className="brand" href="/dashboard">
+          <Link className="brand" href={homeHref}>
             <span className="brand-mark">J</span>
             JCore
           </Link>
           <nav className="nav" aria-label="Navigasi utama">
-            <NavLinks role={profile.role} />
+            <NavLinks allowedMenuKeys={allowedMenuKeys} role={profile.role} />
           </nav>
           <div className="user-chip">
             <span>{profile.full_name}</span>

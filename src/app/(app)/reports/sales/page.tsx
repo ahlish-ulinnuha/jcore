@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
+import { SalesDetailButton } from "./SalesDetailButton";
 import { SalesReportForm } from "./SalesReportForm";
 import { deleteDailySalesReport } from "./actions";
 
@@ -107,6 +108,13 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
   resetHistoryParams.set("date", reportDate);
   resetHistoryParams.set("store", selectedStoreId);
 
+  function editHref(item: DailySalesReport) {
+    const editParams = new URLSearchParams(currentParams);
+    editParams.set("date", item.report_date);
+    editParams.set("store", item.store_id);
+    return `/reports/sales?${editParams}`;
+  }
+
   return (
     <>
       <div className="page-head">
@@ -128,6 +136,7 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
 
       <section className="panel sales-report-panel">
         <SalesReportForm
+          key={`${selectedStoreId}-${reportDate}-${report?.id ?? "new"}`}
           profile={profile}
           report={report ?? null}
           reportDate={reportDate}
@@ -196,7 +205,7 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
                     <th>Shopee</th>
                     <th>Pengeluaran</th>
                     <th>Selisih</th>
-                    <th>Note</th>
+                    <th>Detail</th>
                     {profile.role === "admin" ? <th>Aksi</th> : null}
                   </tr>
                 </thead>
@@ -216,16 +225,23 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
                           {formatRupiah(Number(item.difference))}
                         </span>
                       </td>
-                      <td>{item.notes ?? "-"}</td>
+                      <td>
+                        <SalesDetailButton expenseDetail={item.expense_detail} notes={item.notes} />
+                      </td>
                       {profile.role === "admin" ? (
                         <td>
-                          <form action={deleteDailySalesReport}>
-                            <input name="id" type="hidden" value={item.id} />
-                            <input name="redirect_to" type="hidden" value={currentPath} />
-                            <button className="button danger" type="submit">
-                              Hapus
-                            </button>
-                          </form>
+                          <div className="row-actions compact-actions">
+                            <Link className="button outline" href={editHref(item)}>
+                              Edit
+                            </Link>
+                            <form action={deleteDailySalesReport}>
+                              <input name="id" type="hidden" value={item.id} />
+                              <input name="redirect_to" type="hidden" value={currentPath} />
+                              <button className="button danger" type="submit">
+                                Hapus
+                              </button>
+                            </form>
+                          </div>
                         </td>
                       ) : null}
                     </tr>

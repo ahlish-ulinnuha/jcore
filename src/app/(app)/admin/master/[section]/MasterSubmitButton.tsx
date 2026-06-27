@@ -40,7 +40,7 @@ export function MasterSubmitButton({
       onClick={(event) => {
         const targetForm = event.currentTarget.form;
         if (targetForm && !targetForm.checkValidity()) return;
-        setClicked(true);
+        window.setTimeout(() => setClicked(true), 0);
       }}
       title={title}
       type="submit"

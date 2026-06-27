@@ -99,6 +99,15 @@ export type ProductPriceHistory = {
   vendors?: Vendor | null;
 };
 
+export type ProfileMenuAccess = {
+  id: string;
+  profile_id: string;
+  menu_key: string;
+  can_access: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type PurchaseRequest = {
   id: string;
   request_no: string;

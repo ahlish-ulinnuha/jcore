@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { productDisplayName } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
@@ -38,6 +38,26 @@ function SaveButton() {
 function formatPrice(value?: number | null) {
   if (value === null || value === undefined) return "-";
   return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(Number(value));
+}
+
+function requestLabel(item: AdminVendorItem) {
+  return item.purchase_requests?.request_no || item.request_id || "-";
+}
+
+function groupItemsByRequest(items: AdminVendorItem[]) {
+  return Object.values(
+    items.reduce<Record<string, { items: AdminVendorItem[]; requestNo: string; storeName: string; batchNo: number | string }>>((acc, item) => {
+      const key = item.request_id;
+      acc[key] ??= {
+        batchNo: item.purchase_requests?.batch_no ?? "-",
+        items: [],
+        requestNo: requestLabel(item),
+        storeName: item.purchase_requests?.store_name ?? "-",
+      };
+      acc[key].items.push(item);
+      return acc;
+    }, {}),
+  );
 }
 
 export function AdminVendorPortal({
@@ -144,8 +164,6 @@ export function AdminVendorPortal({
             <table className="admin-vendor-table">
               <thead>
                 <tr>
-                  <th>Request</th>
-                  <th>Store</th>
                   <th>Barang</th>
                   <th>Qty Req</th>
                   <th>Qty Beli</th>
@@ -157,50 +175,65 @@ export function AdminVendorPortal({
                 </tr>
               </thead>
               <tbody>
-                {group.items.map((item) => {
-                  const previousPrice = priceMap.get(`${item.product_id}:${item.vendor_id}`);
-                  return (
-                    <tr key={item.id}>
-                      <td>
-                        {item.purchase_requests?.request_no ?? "-"}
-                        <br />
-                        <span className="muted">Batch {item.purchase_requests?.batch_no ?? "-"}</span>
-                      </td>
-                      <td>{item.purchase_requests?.store_name ?? "-"}</td>
-                      <td>{productDisplayName(item.products)}</td>
-                      <td>
-                        {item.qty} {item.unit}
-                      </td>
-                      <td>
-                        <input form={`vendor-item-${item.id}`} min="0" name="purchased_qty" step="0.01" type="number" defaultValue={item.purchased_qty ?? item.qty} />
-                      </td>
-                      <td>
-                        <input form={`vendor-item-${item.id}`} min="0" name="purchase_price" step="0.01" type="number" defaultValue={item.purchase_price ?? ""} placeholder="0" />
-                      </td>
-                      <td>{formatPrice(previousPrice)}</td>
-                      <td>
-                        <select form={`vendor-item-${item.id}`} name="status" defaultValue={item.status}>
-                          {statuses.map((status) => (
-                            <option key={status} value={status}>
-                              {status.replaceAll("_", " ")}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <input form={`vendor-item-${item.id}`} name="vendor_note" defaultValue={item.vendor_note ?? ""} placeholder="Catatan" />
-                      </td>
-                      <td>
-                        <form action={saveAdminVendorItem} id={`vendor-item-${item.id}`}>
-                          <input name="item_id" type="hidden" value={item.id} />
-                          <input name="product_id" type="hidden" value={item.product_id} />
-                          <input name="vendor_id" type="hidden" value={item.vendor_id} />
-                          <SaveButton />
-                        </form>
+                {groupItemsByRequest(group.items).map((requestGroup) => (
+                  <Fragment key={requestGroup.requestNo}>
+                    <tr className="admin-vendor-request-row">
+                      <td colSpan={8}>
+                        <strong>Request ID: {requestGroup.requestNo}</strong>
+                        <span>Batch {requestGroup.batchNo}</span>
                       </td>
                     </tr>
-                  );
-                })}
+                    <tr className="admin-vendor-store-row">
+                      <td colSpan={8}>Store: {requestGroup.storeName}</td>
+                    </tr>
+                    {requestGroup.items.map((item) => {
+                      const previousPrice = priceMap.get(`${item.product_id}:${item.vendor_id}`);
+                      return (
+                        <tr key={item.id}>
+                          <td>{productDisplayName(item.products)}</td>
+                          <td>
+                            {item.qty} {item.unit}
+                          </td>
+                          <td>
+                            <input form={`vendor-item-${item.id}`} min="0" name="purchased_qty" step="0.01" type="number" defaultValue={item.purchased_qty ?? item.qty} />
+                          </td>
+                          <td>
+                            <input
+                              form={`vendor-item-${item.id}`}
+                              min="0"
+                              name="purchase_price"
+                              step="0.01"
+                              type="number"
+                              defaultValue={item.purchase_price ?? previousPrice ?? ""}
+                              placeholder="0"
+                            />
+                          </td>
+                          <td>{formatPrice(previousPrice)}</td>
+                          <td>
+                            <select form={`vendor-item-${item.id}`} name="status" defaultValue={item.status}>
+                              {statuses.map((status) => (
+                                <option key={status} value={status}>
+                                  {status.replaceAll("_", " ")}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <input form={`vendor-item-${item.id}`} name="vendor_note" defaultValue={item.vendor_note ?? ""} placeholder="Catatan" />
+                          </td>
+                          <td>
+                            <form action={saveAdminVendorItem} id={`vendor-item-${item.id}`}>
+                              <input name="item_id" type="hidden" value={item.id} />
+                              <input name="product_id" type="hidden" value={item.product_id} />
+                              <input name="vendor_id" type="hidden" value={item.vendor_id} />
+                              <SaveButton />
+                            </form>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>
