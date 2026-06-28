@@ -43,8 +43,10 @@ export async function saveDailySalesReport(formData: FormData) {
   const qris = numberValue(formData, "qris");
   const debit = numberValue(formData, "debit");
   const shopee = numberValue(formData, "shopee");
+  const grab = numberValue(formData, "grab");
+  const gojek = numberValue(formData, "gojek");
   const expense = numberValue(formData, "expense");
-  const difference = cashTotal + qris + debit + shopee + expense - systemNominal;
+  const difference = cashTotal + qris + debit + shopee + grab + gojek + expense - systemNominal;
 
   const payload = {
     report_date: reportDate,
@@ -56,6 +58,8 @@ export async function saveDailySalesReport(formData: FormData) {
     qris,
     debit,
     shopee,
+    grab,
+    gojek,
     expense,
     expense_detail: text(formData, "expense_detail") || null,
     difference,

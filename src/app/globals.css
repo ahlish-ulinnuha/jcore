@@ -2505,6 +2505,116 @@ th {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.sales-chart-panel {
+  margin-top: 16px;
+}
+
+.sales-chart-filter {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+}
+
+.sales-chart-cards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 16px;
+}
+
+.sales-chart-card {
+  background: #fffafa;
+  border: 1px solid #efe7e6;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.sales-chart-card.total {
+  background: linear-gradient(135deg, var(--primary), #bd3f3d);
+  color: #fff;
+}
+
+.sales-chart-card span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sales-chart-card.total span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.sales-chart-card strong {
+  display: block;
+  font-size: 24px;
+  line-height: 1.1;
+  margin-top: 8px;
+}
+
+.sales-chart-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sales-chart-box {
+  background: #fff;
+  border: 1px solid #efe7e6;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.sales-chart-box h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.sales-chart-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.sales-chart-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(90px, 0.8fr) minmax(100px, 1.6fr) minmax(110px, auto);
+}
+
+.sales-chart-row span,
+.sales-chart-row strong {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.sales-chart-row span {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sales-chart-row strong {
+  color: var(--primary);
+  text-align: right;
+}
+
+.sales-chart-row div {
+  background: #f3e7e6;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.sales-chart-row i {
+  background: linear-gradient(90deg, var(--primary), #cf5b58);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
 .sales-layout {
   display: grid;
   gap: 14px;
@@ -2998,6 +3108,20 @@ th {
   .sales-layout,
   .sales-payment-grid {
     grid-template-columns: 1fr;
+  }
+
+  .sales-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-chart-row {
+    align-items: stretch;
+    gap: 6px;
+    grid-template-columns: 1fr;
+  }
+
+  .sales-chart-row strong {
+    text-align: left;
   }
 
   .shopping-chart-grid {

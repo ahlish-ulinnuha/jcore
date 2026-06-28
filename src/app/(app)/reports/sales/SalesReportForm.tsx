@@ -47,13 +47,15 @@ export function SalesReportForm({
   const [qris, setQris] = useState(Number(report?.qris ?? 0));
   const [debit, setDebit] = useState(Number(report?.debit ?? 0));
   const [shopee, setShopee] = useState(Number(report?.shopee ?? 0));
+  const [grab, setGrab] = useState(Number(report?.grab ?? 0));
+  const [gojek, setGojek] = useState(Number(report?.gojek ?? 0));
   const [expense, setExpense] = useState(Number(report?.expense ?? 0));
 
   const cashTotal = useMemo(
     () => denominations.reduce((total, denomination) => total + cashCounts[`cash_${denomination}`] * denomination, 0),
     [cashCounts],
   );
-  const difference = cashTotal + qris + debit + shopee + expense - systemNominal;
+  const difference = cashTotal + qris + debit + shopee + grab + gojek + expense - systemNominal;
 
   function updateCash(denomination: typeof denominations[number], value: string) {
     const count = Math.max(0, Math.floor(Number(value) || 0));
@@ -106,7 +108,7 @@ export function SalesReportForm({
           </div>
           <div className="sales-total-card">
             <span>Total Input</span>
-            <strong>{formatRupiah(cashTotal + qris + debit + shopee + expense)}</strong>
+            <strong>{formatRupiah(cashTotal + qris + debit + shopee + grab + gojek + expense)}</strong>
           </div>
           <div className={`sales-total-card ${difference === 0 ? "balanced" : difference > 0 ? "plus" : "minus"}`}>
             <span>Selisih</span>
@@ -151,6 +153,14 @@ export function SalesReportForm({
         <div className="field">
           <label>Shopee</label>
           <input min="0" name="shopee" onChange={(event) => setShopee(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={shopee} />
+        </div>
+        <div className="field">
+          <label>Grab</label>
+          <input min="0" name="grab" onChange={(event) => setGrab(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={grab} />
+        </div>
+        <div className="field">
+          <label>Gojek</label>
+          <input min="0" name="gojek" onChange={(event) => setGojek(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={gojek} />
         </div>
         <div className="field">
           <label>Pengeluaran</label>

@@ -223,6 +223,8 @@ export type DailySalesReport = {
   qris: number;
   debit: number;
   shopee: number;
+  grab: number;
+  gojek: number;
   expense: number;
   expense_detail: string | null;
   difference: number;
