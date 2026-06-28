@@ -2161,6 +2161,10 @@ th {
   margin-bottom: 10px;
 }
 
+.schedule-history-filter {
+  margin-bottom: 14px;
+}
+
 .schedule-change-table {
   min-width: 900px;
 }

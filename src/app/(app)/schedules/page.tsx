@@ -8,6 +8,8 @@ import { ScheduleSubmitButton } from "./ScheduleSubmitButton";
 type SearchParams = Promise<{
   approved?: string;
   error?: string;
+  history_page?: string;
+  history_page_size?: string;
   month?: string;
   requested?: string;
   reviewed?: string;
@@ -103,16 +105,22 @@ function scheduleMonthDate(month: string) {
   return `${month}-01`;
 }
 
+function calendarDate(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 function addMonths(month: string, offset: number) {
   const [year, monthNumber] = month.split("-").map(Number);
-  const date = new Date(year, monthNumber - 1 + offset, 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  const date = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function monthOptionLabel(month: string) {
-  const date = new Date(`${month}-01T00:00:00+07:00`);
+  const date = calendarDate(`${month}-01`);
   return new Intl.DateTimeFormat("id-ID", {
     month: "long",
+    timeZone: "UTC",
     year: "numeric",
   }).format(date);
 }
@@ -139,12 +147,12 @@ function getWeekGroups(dates: string[]) {
 }
 
 function addDays(dateValue: string, days: number) {
-  const date = new Date(`${dateValue}T00:00:00+07:00`);
-  date.setDate(date.getDate() + days);
+  const date = calendarDate(dateValue);
+  date.setUTCDate(date.getUTCDate() + days);
   return new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     month: "2-digit",
-    timeZone: "Asia/Jakarta",
+    timeZone: "UTC",
     year: "numeric",
   }).format(date);
 }
@@ -159,25 +167,27 @@ function completeWeekDates(weekDates: string[]) {
 }
 
 function dayLabel(dateValue: string) {
-  const date = new Date(`${dateValue}T00:00:00+07:00`);
+  const date = calendarDate(dateValue);
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
+    timeZone: "UTC",
     weekday: "short",
   }).format(date);
 }
 
 function fullDateLabel(dateValue: string) {
-  const date = new Date(`${dateValue}T00:00:00+07:00`);
+  const date = calendarDate(dateValue);
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
+    timeZone: "UTC",
     weekday: "short",
   }).format(date);
 }
 
 function dayMeta(dateValue: string) {
-  const date = new Date(`${dateValue}T00:00:00+07:00`);
-  const day = date.getDay();
+  const date = calendarDate(dateValue);
+  const day = date.getUTCDay();
   const holidayName = indonesiaPublicHolidays[dateValue];
   const isToday = dateValue === todayJakarta();
   return {
@@ -237,6 +247,12 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   const monthHolidays = monthDates
     .map((date) => ({ date, name: indonesiaPublicHolidays[date] }))
     .filter((item): item is { date: string; name: string } => Boolean(item.name));
+  const historyPageSizeOptions = [10, 20, 50, 100];
+  const requestedHistoryPageSize = Number(params.history_page_size ?? 10);
+  const historyPageSize = historyPageSizeOptions.includes(requestedHistoryPageSize) ? requestedHistoryPageSize : 10;
+  const historyPage = Math.max(1, Number(params.history_page ?? 1) || 1);
+  const historyRangeFrom = (historyPage - 1) * historyPageSize;
+  const historyRangeTo = historyRangeFrom + historyPageSize - 1;
 
   const [{ data: stores }, { data: shiftTypes }] = await Promise.all([
     supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>(),
@@ -284,15 +300,15 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
         .limit(20)
         .returns<ScheduleActivityLog[]>()
     : { data: [] as ScheduleActivityLog[] };
-  const { data: changeLogs } = scheduleMonth?.id
+  const { data: changeLogs, count: changeLogCount } = scheduleMonth?.id
     ? await supabase
         .from("store_schedule_change_logs")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("schedule_month_id", scheduleMonth.id)
         .order("created_at", { ascending: false })
-        .limit(50)
+        .range(historyRangeFrom, historyRangeTo)
         .returns<ScheduleChangeLog[]>()
-    : { data: [] as ScheduleChangeLog[] };
+    : { data: [] as ScheduleChangeLog[], count: 0 };
   const scheduleRequestsQuery = profile.role === "staff"
       ? supabase
           .from("staff_schedule_requests")
@@ -317,6 +333,17 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   }
   resetParams.set("month", currentMonthJakarta());
   resetParams.set("week", "1");
+  const historyTotalPages = Math.max(1, Math.ceil((changeLogCount ?? 0) / historyPageSize));
+  const activeHistoryPage = Math.min(historyPage, historyTotalPages);
+  const historyBaseParams = new URLSearchParams();
+  if (selectedStoreId) historyBaseParams.set("store", selectedStoreId);
+  historyBaseParams.set("month", selectedMonth);
+  historyBaseParams.set("week", String(selectedWeek));
+  historyBaseParams.set("history_page_size", String(historyPageSize));
+  const previousHistoryParams = new URLSearchParams(historyBaseParams);
+  previousHistoryParams.set("history_page", String(Math.max(1, activeHistoryPage - 1)));
+  const nextHistoryParams = new URLSearchParams(historyBaseParams);
+  nextHistoryParams.set("history_page", String(Math.min(historyTotalPages, activeHistoryPage + 1)));
 
   return (
     <>
@@ -671,44 +698,82 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
         )}
         <div className="schedule-change-history">
           <h3>Detail perubahan</h3>
-          {changeLogs?.length ? (
-            <div className="table-wrap compact-mobile-wrap">
-              <table className="compact-mobile-table schedule-change-table">
-                <thead>
-                  <tr>
-                    <th>Waktu</th>
-                    <th>Staff</th>
-                    <th>Tanggal</th>
-                    <th>Aksi</th>
-                    <th>Shift</th>
-                    <th>Note</th>
-                    <th>Admin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {changeLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td>
-                        {new Date(log.created_at).toLocaleString("id-ID", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </td>
-                      <td>{log.staff_name ?? "-"}</td>
-                      <td>{fullDateLabel(log.work_date)}</td>
-                      <td>{changeActionLabel(log.action)}</td>
-                      <td>
-                        {(log.old_shift_code ?? "-")} → {(log.new_shift_code ?? "-")}
-                      </td>
-                      <td>
-                        {(log.old_notes ?? "-")} → {(log.new_notes ?? "-")}
-                      </td>
-                      <td>{log.actor_name ?? "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <form className="filter-grid schedule-history-filter">
+            <input name="store" type="hidden" value={selectedStoreId} />
+            <input name="month" type="hidden" value={selectedMonth} />
+            <input name="week" type="hidden" value={selectedWeek} />
+            <input name="history_page" type="hidden" value="1" />
+            <div className="field">
+              <label>Data per halaman</label>
+              <select name="history_page_size" defaultValue={historyPageSize}>
+                {historyPageSizeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option} row
+                  </option>
+                ))}
+              </select>
             </div>
+            <ScheduleSubmitButton idleText="Tampilkan History" pendingText="Sedang menampilkan..." />
+          </form>
+          {changeLogs?.length ? (
+            <>
+              <div className="table-wrap compact-mobile-wrap">
+                <table className="compact-mobile-table schedule-change-table">
+                  <thead>
+                    <tr>
+                      <th>Waktu</th>
+                      <th>Staff</th>
+                      <th>Tanggal</th>
+                      <th>Aksi</th>
+                      <th>Shift</th>
+                      <th>Note</th>
+                      <th>Admin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {changeLogs.map((log) => (
+                      <tr key={log.id}>
+                        <td>
+                          {new Date(log.created_at).toLocaleString("id-ID", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </td>
+                        <td>{log.staff_name ?? "-"}</td>
+                        <td>{fullDateLabel(log.work_date)}</td>
+                        <td>{changeActionLabel(log.action)}</td>
+                        <td>
+                          {(log.old_shift_code ?? "-")} → {(log.new_shift_code ?? "-")}
+                        </td>
+                        <td>
+                          {(log.old_notes ?? "-")} → {(log.new_notes ?? "-")}
+                        </td>
+                        <td>{log.actor_name ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="pagination">
+                <Link
+                  aria-label="Halaman history sebelumnya"
+                  className={`button outline ${activeHistoryPage <= 1 ? "disabled-link" : ""}`}
+                  href={`/schedules?${previousHistoryParams}`}
+                >
+                  ‹
+                </Link>
+                <span className="muted">
+                  {activeHistoryPage} / {historyTotalPages} ({changeLogCount ?? 0} data)
+                </span>
+                <Link
+                  aria-label="Halaman history berikutnya"
+                  className={`button outline ${activeHistoryPage >= historyTotalPages ? "disabled-link" : ""}`}
+                  href={`/schedules?${nextHistoryParams}`}
+                >
+                  ›
+                </Link>
+              </div>
+            </>
           ) : (
             <p className="muted">Belum ada detail perubahan.</p>
           )}

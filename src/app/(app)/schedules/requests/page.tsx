@@ -44,11 +44,17 @@ function getMonthDates(month: string) {
   };
 }
 
+function calendarDate(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 function fullDateLabel(dateValue: string) {
-  const date = new Date(`${dateValue}T00:00:00+07:00`);
+  const date = calendarDate(dateValue);
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
+    timeZone: "UTC",
     weekday: "short",
   }).format(date);
 }

@@ -13,11 +13,16 @@ function todayJakarta() {
   }).format(new Date());
 }
 
+function calendarDate(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 function addDays(dateValue: string, days: number) {
-  const date = new Date(`${dateValue}T00:00:00+07:00`);
-  date.setDate(date.getDate() + days);
+  const date = calendarDate(dateValue);
+  date.setUTCDate(date.getUTCDate() + days);
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
+    timeZone: "UTC",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -44,10 +49,11 @@ function getWeekDatesForDate(dateValue: string) {
 }
 
 function dayLabel(dateValue: string) {
-  const date = new Date(`${dateValue}T00:00:00+07:00`);
+  const date = calendarDate(dateValue);
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
+    timeZone: "UTC",
     weekday: "short",
   }).format(date);
 }
