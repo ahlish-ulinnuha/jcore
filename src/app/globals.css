@@ -1613,6 +1613,116 @@ th {
   margin-top: 16px;
 }
 
+.shopping-dashboard-panel {
+  margin-top: 16px;
+}
+
+.shopping-dashboard-filter {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+}
+
+.shopping-dashboard-cards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 16px;
+}
+
+.shopping-dashboard-card {
+  background: #fffafa;
+  border: 1px solid #efe7e6;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.shopping-dashboard-card.total {
+  background: linear-gradient(135deg, var(--primary), #bd3f3d);
+  color: #fff;
+}
+
+.shopping-dashboard-card span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.shopping-dashboard-card.total span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.shopping-dashboard-card strong {
+  display: block;
+  font-size: 24px;
+  line-height: 1.1;
+  margin-top: 8px;
+}
+
+.shopping-chart-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shopping-chart-card {
+  background: #fff;
+  border: 1px solid #efe7e6;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.shopping-chart-card h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.shopping-chart-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.shopping-chart-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(90px, 0.8fr) minmax(100px, 1.6fr) minmax(110px, auto);
+}
+
+.shopping-chart-row span,
+.shopping-chart-row strong {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.shopping-chart-row span {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shopping-chart-row strong {
+  color: var(--primary);
+  text-align: right;
+}
+
+.shopping-chart-row div {
+  background: #f3e7e6;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.shopping-chart-row i {
+  background: linear-gradient(90deg, var(--primary), #cf5b58);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
 .menu-access-grid {
   display: grid;
   gap: 8px;
@@ -2888,6 +2998,20 @@ th {
   .sales-layout,
   .sales-payment-grid {
     grid-template-columns: 1fr;
+  }
+
+  .shopping-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-chart-row {
+    align-items: stretch;
+    gap: 6px;
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-chart-row strong {
+    text-align: left;
   }
 
   .cash-denomination-grid {

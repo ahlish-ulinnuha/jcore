@@ -100,6 +100,8 @@ export function ShoppingRecordForm({
           <option value="cash">Cash</option>
           <option value="qris">QRIS</option>
           <option value="debit">Debit</option>
+          <option value="kartu kredit">Kartu Kredit</option>
+          <option value="shopee">Shopee</option>
           <option value="transfer">Transfer</option>
           <option value="other">Lainnya</option>
         </select>
