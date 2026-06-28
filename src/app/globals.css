@@ -2181,6 +2181,100 @@ th {
   font-weight: 800;
 }
 
+.overtime-summary-cards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 16px;
+}
+
+.overtime-summary-card {
+  background: linear-gradient(135deg, #fff 0%, #fff6f6 100%);
+  border-color: #f0dddd;
+}
+
+.overtime-summary-card.total {
+  background: linear-gradient(135deg, var(--primary) 0%, #bd3f3d 100%);
+  color: #fff;
+}
+
+.overtime-summary-card span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.overtime-summary-card.total span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.overtime-summary-card strong {
+  display: block;
+  font-size: 26px;
+  line-height: 1.1;
+  margin-top: 8px;
+}
+
+.overtime-summary-card p {
+  font-size: 14px;
+  font-weight: 900;
+  margin: 6px 0 0;
+}
+
+.overtime-table-wrap {
+  max-height: 70vh;
+}
+
+.overtime-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1320px;
+}
+
+.overtime-table th,
+.overtime-table td {
+  border-bottom: 1px solid #f0e8e7;
+  font-size: 12px;
+  min-width: 42px;
+  padding: 10px 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.overtime-table th:first-child,
+.overtime-table td:first-child {
+  left: 0;
+  min-width: 180px;
+  position: sticky;
+  text-align: left;
+  z-index: 2;
+}
+
+.overtime-table thead th {
+  background: #fffafa;
+  color: var(--primary);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.overtime-table thead th:first-child {
+  z-index: 4;
+}
+
+.overtime-table tbody th {
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.overtime-table tbody tr:hover th,
+.overtime-table tbody tr:hover td {
+  background: #fff7f7;
+}
+
 .dashboard-schedule-panel {
   margin-top: 18px;
 }

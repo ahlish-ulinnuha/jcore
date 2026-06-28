@@ -23,6 +23,7 @@ const adminReportMenu = [
 const operationalMenu = [
   { key: "schedules", label: "Schedule", staffLabel: "My Schedule" },
   { key: "schedule_requests", label: "Request Schedule" },
+  { adminOnly: true, key: "overtime_summary", label: "Overtime Summary" },
 ];
 
 export function NavLinks({ allowedMenuKeys, role }: { allowedMenuKeys: string[]; role: Role }) {
@@ -41,6 +42,7 @@ export function NavLinks({ allowedMenuKeys, role }: { allowedMenuKeys: string[];
   const visibleOperationalLinks =
     role === "admin" || role === "staff"
       ? operationalMenu
+        .filter((item) => !("adminOnly" in item) || role === "admin")
         .map((item) => {
           const link = mainMenuItems.find((menuItem) => menuItem.key === item.key);
           return link && hasMenuAccess(link.key, allowedMenuKeys) ? { ...link, label: role === "staff" && "staffLabel" in item ? item.staffLabel : item.label } : null;

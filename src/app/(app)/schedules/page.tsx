@@ -138,10 +138,27 @@ function getMonthDates(month: string) {
   });
 }
 
-function getWeekGroups(dates: string[]) {
+function getWeekGroups(month: string) {
+  const dates = getMonthDates(month);
+  const firstDate = calendarDate(dates[0]);
+  const firstDay = firstDate.getUTCDay();
+  const mondayOffset = firstDay === 0 ? -6 : 1 - firstDay;
+  const calendarStart = addDays(dates[0], mondayOffset);
+  const lastDate = calendarDate(dates[dates.length - 1]);
+  const lastDay = lastDate.getUTCDay();
+  const sundayOffset = lastDay === 0 ? 0 : 7 - lastDay;
+  const calendarEnd = addDays(dates[dates.length - 1], sundayOffset);
   const groups: string[][] = [];
-  for (let index = 0; index < dates.length; index += 7) {
-    groups.push(dates.slice(index, index + 7));
+  let cursor = calendarStart;
+  let currentWeek: string[] = [];
+
+  while (cursor <= calendarEnd) {
+    currentWeek.push(cursor);
+    if (currentWeek.length === 7) {
+      groups.push(currentWeek);
+      currentWeek = [];
+    }
+    cursor = addDays(cursor, 1);
   }
   return groups;
 }
@@ -164,6 +181,12 @@ function completeWeekDates(weekDates: string[]) {
     dates.push(addDays(dates[dates.length - 1], 1));
   }
   return dates;
+}
+
+function outsideMonthLabel(dateValue: string, selectedMonth: string) {
+  if (dateValue.slice(0, 7) < selectedMonth) return "Previous";
+  if (dateValue.slice(0, 7) > selectedMonth) return "Next";
+  return null;
 }
 
 function dayLabel(dateValue: string) {
@@ -238,10 +261,10 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   const selectedMonth = params.month ?? currentMonthJakarta();
   const staffMonthSelectOptions = staffMonthOptions(selectedMonth);
   const monthDates = getMonthDates(selectedMonth);
-  const weekGroups = getWeekGroups(monthDates);
+  const weekGroups = getWeekGroups(selectedMonth);
   const selectedWeek = Math.min(Math.max(1, Number(params.week ?? 1) || 1), weekGroups.length || 1);
-  const editableDates = profile.role === "staff" ? monthDates : weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7);
-  const dates = completeWeekDates(editableDates);
+  const editableDates = profile.role === "staff" ? monthDates : (weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7)).filter((date) => date.slice(0, 7) === selectedMonth);
+  const dates = profile.role === "staff" ? monthDates : weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7);
   const monthStart = monthDates[0];
   const monthEnd = monthDates[monthDates.length - 1];
   const monthHolidays = monthDates
@@ -487,8 +510,8 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
               <input name="store_id" type="hidden" value={selectedStoreId} />
               <input name="month" type="hidden" value={selectedMonth} />
               <input name="week_no" type="hidden" value={selectedWeek} />
-              <input name="date_from" type="hidden" value={dates[0] ?? ""} />
-              <input name="date_to" type="hidden" value={dates[dates.length - 1] ?? ""} />
+              <input name="date_from" type="hidden" value={editableDates[0] ?? ""} />
+              <input name="date_to" type="hidden" value={editableDates[editableDates.length - 1] ?? ""} />
               <ScheduleSubmitButton disabled={scheduleMonth.status === "approved"} idleText={scheduleMonth.status === "approved" ? "Approved" : "Approve"} pendingText="Sedang approve..." />
             </form>
           ) : null}
@@ -530,12 +553,12 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
                       {dates.map((date) => {
                         const value = scheduleMap.get(`${staff.id}:${date}`);
                         const meta = dayMeta(date);
-                        const isReadonlyInfo = !editableDates.includes(date);
+                        const readonlyLabel = outsideMonthLabel(date, selectedMonth);
                         return (
-                          <td className={[meta.className, isReadonlyInfo ? "readonly-info" : ""].filter(Boolean).join(" ")} key={date} title={meta.holidayName ?? undefined}>
-                            {isReadonlyInfo ? (
+                          <td className={[meta.className, readonlyLabel ? "readonly-info" : ""].filter(Boolean).join(" ")} key={date} title={meta.holidayName ?? undefined}>
+                            {readonlyLabel ? (
                               <div className="schedule-next-month-info">
-                                <strong>Next</strong>
+                                <strong>{readonlyLabel}</strong>
                                 <span>{date.slice(5)}</span>
                               </div>
                             ) : (
@@ -579,13 +602,13 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
                   <div className="staff-calendar-days">
                     {completeWeekDates(weekDates).map((date) => {
                       const meta = dayMeta(date);
-                      const isNextMonthInfo = !monthDates.includes(date);
+                      const readonlyLabel = outsideMonthLabel(date, selectedMonth);
                       const value = scheduleMap.get(`${profile.id}:${date}`);
                       return (
-                        <div className={[meta.className, isNextMonthInfo ? "readonly-info" : "", "staff-calendar-day"].filter(Boolean).join(" ")} key={date} title={meta.holidayName ?? undefined}>
+                        <div className={[meta.className, readonlyLabel ? "readonly-info" : "", "staff-calendar-day"].filter(Boolean).join(" ")} key={date} title={meta.holidayName ?? undefined}>
                           <span>{dayLabel(date)}</span>
-                          {isNextMonthInfo ? (
-                            <strong className="next-month-label">Next</strong>
+                          {readonlyLabel ? (
+                            <strong className="next-month-label">{readonlyLabel}</strong>
                           ) : (
                             <>
                               <strong>{value?.shift_code ?? "-"}</strong>

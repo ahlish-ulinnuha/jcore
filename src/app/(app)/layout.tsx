@@ -79,6 +79,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {hasMenuAccess("report_sales", allowedMenuKeys) ? <Link aria-label="Report Sales" data-tooltip="Report Sales" href="/reports/sales" title="Report Sales">Rp</Link> : null}
         {hasMenuAccess("shopping", allowedMenuKeys) ? <Link aria-label="Belanja" data-tooltip="Belanja" href="/shopping" title="Belanja">$</Link> : null}
         {hasMenuAccess("schedules", allowedMenuKeys) ? <Link aria-label="Schedule" data-tooltip="Schedule" href="/schedules" title="Schedule">⌚</Link> : null}
+        {profile.role === "admin" && hasMenuAccess("overtime_summary", allowedMenuKeys) ? <Link aria-label="Overtime Summary" data-tooltip="Overtime Summary" href="/overtime-summary" title="Overtime Summary">OT</Link> : null}
         {hasAnyMasterMenuAccess(allowedMenuKeys) ? <Link aria-label="Master Data" data-tooltip="Master Data" href="/admin/master" title="Master Data">⚙</Link> : null}
         {hasMenuAccess("vendor_portal", allowedMenuKeys) ? <Link aria-label="Vendor" data-tooltip="Vendor" href="/vendor" title="Vendor">✓</Link> : null}
         <form action={signOut} className="sidebar-bottom">

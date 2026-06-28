@@ -9,6 +9,7 @@ export const mainMenuItems = [
   { href: "/shopping", key: "shopping", label: "Belanja", roles: ["admin", "staff"] },
   { href: "/schedules", key: "schedules", label: "Schedule", roles: ["admin", "staff"] },
   { href: "/schedules/requests", key: "schedule_requests", label: "Request Schedule", roles: ["admin"] },
+  { href: "/overtime-summary", key: "overtime_summary", label: "Overtime Summary", roles: ["admin"] },
   { href: "/admin/vendor", key: "admin_vendor", label: "Vendor", roles: ["admin"] },
   { href: "/vendor", key: "vendor_portal", label: "Vendor", roles: ["vendor"] },
 ] as const;
