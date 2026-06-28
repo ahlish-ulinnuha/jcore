@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, PurchaseRequest } from "@/lib/types";
+import type { Profile, PurchaseRequest, ShiftType, StoreStaffSchedule } from "@/lib/types";
 import { RequestStatusForm } from "./RequestStatusForm";
 
 function todayJakarta() {
@@ -30,6 +30,28 @@ function displayDate(value: string) {
   return `${day}-${month}-${year}`;
 }
 
+function getMonthDates(dateValue: string) {
+  const [year, month] = dateValue.split("-").map(Number);
+  const monthValue = String(month).padStart(2, "0");
+  const days = new Date(year, month, 0).getDate();
+  return Array.from({ length: days }, (_, index) => `${year}-${monthValue}-${String(index + 1).padStart(2, "0")}`);
+}
+
+function getWeekDatesForDate(dateValue: string) {
+  const monthDates = getMonthDates(dateValue);
+  const weekIndex = Math.floor(Math.max(0, monthDates.indexOf(dateValue)) / 7);
+  return monthDates.slice(weekIndex * 7, weekIndex * 7 + 7);
+}
+
+function dayLabel(dateValue: string) {
+  const date = new Date(`${dateValue}T00:00:00+07:00`);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    weekday: "short",
+  }).format(date);
+}
+
 type SearchParams = Promise<{ date_from?: string; date_to?: string; updated?: string }>;
 
 export default async function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
@@ -48,6 +70,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
 
   const today = todayJakarta();
   const tomorrow = addDays(today, 1);
+  const currentWeekDates = getWeekDatesForDate(today);
   const params = await searchParams;
   const dateFrom = params.date_from ?? today;
   const dateTo = params.date_to ?? tomorrow;
@@ -76,6 +99,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
       .lte("purchase_requests.request_date", dateTo)
       .eq("purchase_requests.status", "submitted")
       .in("status", ["unavailable", "partially_available"]);
+  const scheduleQuery = staffStoreId
+    ? supabase
+        .from("store_staff_schedules")
+        .select("*")
+        .eq("store_id", staffStoreId)
+        .eq("staff_id", profile.id)
+        .gte("work_date", currentWeekDates[0])
+        .lte("work_date", currentWeekDates[currentWeekDates.length - 1])
+        .returns<StoreStaffSchedule[]>()
+    : null;
+  const shiftTypesQuery = staffStoreId
+    ? supabase.from("shift_types").select("*").eq("is_active", true).order("sort_order").returns<ShiftType[]>()
+    : null;
 
   if (staffStoreId) {
     requestCountQuery.eq("store_id", staffStoreId);
@@ -83,13 +119,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     unavailableQuery.eq("purchase_requests.store_id", staffStoreId);
   }
 
-  const [{ count: requestCount }, { data: requests }, { count: unavailableCount }] = await Promise.all([
+  const [{ count: requestCount }, { data: requests }, { count: unavailableCount }, scheduleResult, shiftTypeResult] = await Promise.all([
     requestCountQuery,
     requestsQuery.returns<PurchaseRequest[]>(),
     unavailableQuery,
+    scheduleQuery ?? Promise.resolve({ data: [] as StoreStaffSchedule[] }),
+    shiftTypesQuery ?? Promise.resolve({ data: [] as ShiftType[] }),
   ]);
 
   const requestRows = requests ?? [];
+  const scheduleMap = new Map((scheduleResult.data ?? []).map((schedule) => [schedule.work_date, schedule]));
+  const shiftMap = new Map((shiftTypeResult.data ?? []).map((shift) => [shift.code, shift]));
+  const scheduleError = "error" in scheduleResult ? scheduleResult.error : null;
 
   return (
     <>
@@ -116,6 +157,40 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
           <strong>{unavailableCount ?? 0}</strong>
         </div>
       </section>
+
+      {profile.role === "staff" ? (
+        <section className="panel dashboard-schedule-panel">
+          <div className="page-head compact">
+            <div>
+              <p className="eyebrow">Schedule minggu ini</p>
+              <h2>{displayDate(currentWeekDates[0])} - {displayDate(currentWeekDates[currentWeekDates.length - 1])}</h2>
+            </div>
+            <Link className="button outline" href={`/schedules?month=${today.slice(0, 7)}`}>
+              Lihat Full My Schedule
+            </Link>
+          </div>
+          <div className="dashboard-schedule-grid">
+            {currentWeekDates.map((date) => {
+              const schedule = scheduleMap.get(date);
+              const shift = schedule?.shift_code ? shiftMap.get(schedule.shift_code) : null;
+              const isToday = date === today;
+              return (
+                <div className={`dashboard-schedule-day ${isToday ? "today" : ""}`} key={date}>
+                  <span>{dayLabel(date)}</span>
+                  <strong>{schedule?.shift_code ?? "-"}</strong>
+                  <p>{shift ? shift.name : "Belum ada schedule"}</p>
+                  {schedule?.notes ? <small>{schedule.notes}</small> : null}
+                </div>
+              );
+            })}
+          </div>
+          {scheduleError ? (
+            <div className="alert" style={{ marginTop: 12 }}>
+              Schedule belum bisa dibaca: {scheduleError.message}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="panel" style={{ marginTop: 18 }}>
         {params.updated === "1" ? <div className="toast submit">Status request berhasil diubah.</div> : null}

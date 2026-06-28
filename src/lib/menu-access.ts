@@ -7,6 +7,8 @@ export const mainMenuItems = [
   { href: "/reports/spices", key: "report_spices", label: "Report Bumbu", roles: ["admin", "staff"] },
   { href: "/reports/sales", key: "report_sales", label: "Report Sales", roles: ["admin", "staff"] },
   { href: "/shopping", key: "shopping", label: "Belanja", roles: ["admin", "staff"] },
+  { href: "/schedules", key: "schedules", label: "Schedule", roles: ["admin", "staff"] },
+  { href: "/schedules/requests", key: "schedule_requests", label: "Request Schedule", roles: ["admin"] },
   { href: "/admin/vendor", key: "admin_vendor", label: "Vendor", roles: ["admin"] },
   { href: "/vendor", key: "vendor_portal", label: "Vendor", roles: ["vendor"] },
 ] as const;
@@ -41,8 +43,8 @@ export function allowedMenuKeysForRole(role: Role, rows: MenuAccessRowLike[] = [
   const defaultKeys = defaultMenuKeysForRole(role);
   if (rows.length === 0) return defaultKeys;
 
-  const selectedKeys = new Set(rows.filter((row) => row.can_access).map((row) => row.menu_key));
-  return defaultKeys.filter((key) => selectedKeys.has(key));
+  const accessByKey = new Map(rows.map((row) => [row.menu_key, row.can_access]));
+  return defaultKeys.filter((key) => !accessByKey.has(key) || accessByKey.get(key) === true);
 }
 
 export function hasMenuAccess(key: string, allowedKeys: string[]) {

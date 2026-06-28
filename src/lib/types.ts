@@ -99,6 +99,44 @@ export type ProductPriceHistory = {
   vendors?: Vendor | null;
 };
 
+export type ShiftType = {
+  code: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type StoreScheduleMonth = {
+  id: string;
+  store_id: string;
+  schedule_month: string;
+  status: "draft" | "pending_approval" | "approved";
+  submitted_by: string | null;
+  submitted_at: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StoreStaffSchedule = {
+  id: string;
+  schedule_month_id: string;
+  store_id: string;
+  staff_id: string;
+  work_date: string;
+  shift_code: string | null;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProfileMenuAccess = {
   id: string;
   profile_id: string;
