@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Toast = {
   text: string;
@@ -11,9 +11,11 @@ type Toast = {
 export function NavigationLoading() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [, startTransition] = useTransition();
+  const currentUrl = `${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`;
 
   useEffect(() => {
     setLoading(false);
@@ -22,7 +24,7 @@ export function NavigationLoading() {
       sessionStorage.removeItem("request-toast");
       setToast(JSON.parse(queuedToast) as Toast);
     }
-  }, [pathname]);
+  }, [currentUrl]);
 
   useEffect(() => {
     if (!toast) return;
@@ -35,10 +37,11 @@ export function NavigationLoading() {
       const target = event.target as HTMLElement | null;
       const anchor = target?.closest("a");
       if (!anchor) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
 
       const href = anchor.getAttribute("href");
-      if (!href || href.startsWith("#") || href.startsWith("http") || anchor.target) return;
-      if (href === pathname) return;
+      if (!href || href.startsWith("#") || href.startsWith("http") || anchor.target || anchor.hasAttribute("download")) return;
+      if (href === currentUrl) return;
 
       event.preventDefault();
       setLoading(true);
@@ -47,7 +50,7 @@ export function NavigationLoading() {
 
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, [pathname, router]);
+  }, [currentUrl, router]);
 
   return (
     <>
