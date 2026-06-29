@@ -66,7 +66,7 @@ function formatDisplayDate(value: string) {
   const ddmmyyyy = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
   if (ddmmyyyy) return value;
 
-  const yyyymmdd = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const yyyymmdd = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (yyyymmdd) return `${yyyymmdd[3]}-${yyyymmdd[2]}-${yyyymmdd[1]}`;
 
   const date = new Date(value);
@@ -85,7 +85,7 @@ function filterDateValue(value: string) {
   const ddmmyyyy = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
   if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
 
-  const yyyymmdd = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const yyyymmdd = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (yyyymmdd) return `${yyyymmdd[1]}-${yyyymmdd[2]}-${yyyymmdd[3]}`;
 
   const date = new Date(value);

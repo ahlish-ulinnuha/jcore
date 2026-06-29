@@ -13,7 +13,7 @@ type StaffWithStore = Profile & {
 };
 
 const overtimeHoursByShift: Record<string, number> = {
-  F: 4,
+  F: 5,
   MF: 2,
   MFP: 2,
 };

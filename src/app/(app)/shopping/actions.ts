@@ -59,6 +59,8 @@ export async function saveShoppingRecord(formData: FormData) {
     store_code: store.code,
     store_id: store.id,
     store_name: store.name,
+    tanggal: recordDate,
+    date: recordDate,
     text: commandText,
     token: process.env.GOOGLE_APPS_SCRIPT_TOKEN ?? "",
     data: {

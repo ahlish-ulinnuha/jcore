@@ -267,6 +267,8 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   const dates = profile.role === "staff" ? monthDates : weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7);
   const monthStart = monthDates[0];
   const monthEnd = monthDates[monthDates.length - 1];
+  const visibleScheduleStart = profile.role === "staff" ? weekGroups[0]?.[0] ?? monthStart : monthStart;
+  const visibleScheduleEnd = profile.role === "staff" ? weekGroups[weekGroups.length - 1]?.[6] ?? monthEnd : monthEnd;
   const monthHolidays = monthDates
     .map((date) => ({ date, name: indonesiaPublicHolidays[date] }))
     .filter((item): item is { date: string; name: string } => Boolean(item.name));
@@ -309,8 +311,8 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
         .from("store_staff_schedules")
         .select("*")
         .eq("store_id", selectedStoreId)
-        .gte("work_date", monthStart)
-        .lte("work_date", monthEnd)
+        .gte("work_date", visibleScheduleStart)
+        .lte("work_date", visibleScheduleEnd)
         .returns<StoreStaffSchedule[]>()
     : { data: [] as StoreStaffSchedule[] };
 
@@ -608,11 +610,15 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
                         <div className={[meta.className, readonlyLabel ? "readonly-info" : "", "staff-calendar-day"].filter(Boolean).join(" ")} key={date} title={meta.holidayName ?? undefined}>
                           <span>{dayLabel(date)}</span>
                           {readonlyLabel ? (
-                            <strong className="next-month-label">{readonlyLabel}</strong>
+                            <>
+                              <small className="next-month-label">{readonlyLabel}</small>
+                              <strong>{value?.shift_code ?? "-"}</strong>
+                              {value?.notes ? <small className="schedule-note">Note: {value.notes}</small> : null}
+                            </>
                           ) : (
                             <>
                               <strong>{value?.shift_code ?? "-"}</strong>
-                              {value?.notes ? <small>{value.notes}</small> : null}
+                              {value?.notes ? <small className="schedule-note">Note: {value.notes}</small> : null}
                             </>
                           )}
                         </div>

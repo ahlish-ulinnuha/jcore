@@ -2216,6 +2216,17 @@ th {
   font-weight: 800;
 }
 
+.schedule-note {
+  background: rgba(149, 36, 35, 0.08);
+  border: 1px solid rgba(149, 36, 35, 0.16);
+  border-radius: 10px;
+  color: var(--primary);
+  display: block;
+  line-height: 1.35;
+  margin-top: 2px;
+  padding: 6px 8px;
+}
+
 .staff-calendar-day .next-month-label {
   color: var(--muted);
   font-size: 18px;
@@ -2441,6 +2452,17 @@ th {
   font-size: 12px;
   margin-top: 8px;
   opacity: 0.78;
+}
+
+.dashboard-schedule-day .schedule-note {
+  color: var(--primary);
+  opacity: 1;
+}
+
+.dashboard-schedule-day.today .schedule-note {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
 }
 
 .checkbox-line {

@@ -35,17 +35,12 @@ function displayDate(value: string) {
   return `${day}-${month}-${year}`;
 }
 
-function getMonthDates(dateValue: string) {
-  const [year, month] = dateValue.split("-").map(Number);
-  const monthValue = String(month).padStart(2, "0");
-  const days = new Date(year, month, 0).getDate();
-  return Array.from({ length: days }, (_, index) => `${year}-${monthValue}-${String(index + 1).padStart(2, "0")}`);
-}
-
 function getWeekDatesForDate(dateValue: string) {
-  const monthDates = getMonthDates(dateValue);
-  const weekIndex = Math.floor(Math.max(0, monthDates.indexOf(dateValue)) / 7);
-  return monthDates.slice(weekIndex * 7, weekIndex * 7 + 7);
+  const date = calendarDate(dateValue);
+  const day = date.getUTCDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const weekStart = addDays(dateValue, mondayOffset);
+  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 }
 
 function dayLabel(dateValue: string) {
@@ -185,7 +180,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
                   <span>{dayLabel(date)}</span>
                   <strong>{schedule?.shift_code ?? "-"}</strong>
                   <p>{shift ? shift.name : "Belum ada schedule"}</p>
-                  {schedule?.notes ? <small>{schedule.notes}</small> : null}
+                  {schedule?.notes ? <small className="schedule-note">Note: {schedule.notes}</small> : null}
                 </div>
               );
             })}
