@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Store } from "@/lib/types";
 import { ShoppingDetailButton } from "./ShoppingDetailButton";
 import { ShoppingRecordForm } from "./ShoppingRecordForm";
+import { ShoppingSavedModal } from "./ShoppingSavedModal";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -331,7 +333,9 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
         </div>
       </div>
 
-      {params.saved === "1" ? <div className="toast submit">Data belanja berhasil dikirim ke Google Sheet.</div> : null}
+      <Suspense fallback={null}>
+        <ShoppingSavedModal />
+      </Suspense>
       {error ? <div className="toast delete">{error}</div> : null}
 
       <section className="panel shopping-panel">
