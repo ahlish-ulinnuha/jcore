@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
 import { SalesDetailButton } from "./SalesDetailButton";
 import { SalesReportForm } from "./SalesReportForm";
+import { SalesSavedModal } from "./SalesSavedModal";
 import { deleteDailySalesReport } from "./actions";
 
 function todayJakarta() {
@@ -206,7 +208,9 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
         </div>
       </div>
 
-      {params.saved === "1" ? <div className="toast submit">Report sales berhasil disimpan.</div> : null}
+      <Suspense fallback={null}>
+        <SalesSavedModal />
+      </Suspense>
       {params.deleted === "1" ? <div className="toast delete">Report sales berhasil dihapus.</div> : null}
 
       {params.error === "missing-store" ? (

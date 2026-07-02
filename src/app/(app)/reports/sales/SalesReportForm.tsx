@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
 import { saveDailySalesReport } from "./actions";
 
@@ -27,6 +28,15 @@ function selectZero(event: React.FocusEvent<HTMLInputElement>) {
   if (event.currentTarget.value === "0") {
     event.currentTarget.select();
   }
+}
+
+function SaveButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button className={`button primary ${pending ? "saving" : ""}`} disabled={pending} type="submit">
+      {pending ? "Menyimpan..." : "Simpan Report Sales"}
+    </button>
+  );
 }
 
 export function SalesReportForm({
@@ -179,9 +189,7 @@ export function SalesReportForm({
       </div>
 
       <div className="row-actions">
-        <button className="button primary" type="submit">
-          Simpan Report Sales
-        </button>
+        <SaveButton />
       </div>
     </form>
   );
