@@ -37,7 +37,8 @@ type SearchParams = Promise<{
   date?: string;
   deleted?: string;
   error?: string;
-  history_date?: string;
+  history_date_from?: string;
+  history_date_to?: string;
   history_store?: string;
   page?: string;
   page_size?: string;
@@ -82,7 +83,8 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
   const chartDateFrom = params.chart_date_from ?? monthStartJakarta();
   const chartDateTo = params.chart_date_to ?? todayJakarta();
   const chartMethod = params.chart_method ?? "all";
-  const historyDate = params.history_date ?? "";
+  const historyDateFrom = params.history_date_from ?? "";
+  const historyDateTo = params.history_date_to ?? "";
   const historyStore = profile.role === "admin" ? params.history_store ?? "all" : profile.store_id ?? "all";
   const currentPage = Math.max(1, Number(params.page ?? 1) || 1);
   const pageSizeOptions = [10, 20, 50, 100];
@@ -121,8 +123,12 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
     historyQuery.eq("store_id", historyStore);
   }
 
-  if (historyDate) {
-    historyQuery.eq("report_date", historyDate);
+  if (historyDateFrom) {
+    historyQuery.gte("report_date", historyDateFrom);
+  }
+
+  if (historyDateTo) {
+    historyQuery.lte("report_date", historyDateTo);
   }
 
   const { data: historyReports, count: historyCount } = await historyQuery.returns<DailySalesReport[]>();
@@ -174,7 +180,8 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
   const historyParams = new URLSearchParams();
   historyParams.set("date", reportDate);
   historyParams.set("store", selectedStoreId);
-  if (historyDate) historyParams.set("history_date", historyDate);
+  if (historyDateFrom) historyParams.set("history_date_from", historyDateFrom);
+  if (historyDateTo) historyParams.set("history_date_to", historyDateTo);
   if (historyStore !== "all") historyParams.set("history_store", historyStore);
   historyParams.set("page_size", String(pageSize));
   const previousParams = new URLSearchParams(historyParams);
@@ -220,14 +227,16 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
       ) : null}
 
       <section className="panel sales-report-panel">
-        <SalesReportForm
-          key={`${selectedStoreId}-${reportDate}-${report?.id ?? "new"}`}
-          profile={profile}
-          report={report ?? null}
-          reportDate={reportDate}
-          selectedStoreId={selectedStoreId}
-          stores={stores ?? []}
-        />
+        <Suspense fallback={null}>
+          <SalesReportForm
+            key={`${selectedStoreId}-${reportDate}-${report?.id ?? "new"}`}
+            profile={profile}
+            report={report ?? null}
+            reportDate={reportDate}
+            selectedStoreId={selectedStoreId}
+            stores={stores ?? []}
+          />
+        </Suspense>
       </section>
 
       {profile.role === "admin" ? (
@@ -373,8 +382,12 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
           <input name="date" type="hidden" value={reportDate} />
           <input name="store" type="hidden" value={selectedStoreId} />
           <div className="field">
-            <label>Tanggal History</label>
-            <input name="history_date" type="date" defaultValue={historyDate} />
+            <label>Dari Tanggal</label>
+            <input name="history_date_from" type="date" defaultValue={historyDateFrom} />
+          </div>
+          <div className="field">
+            <label>Sampai Tanggal</label>
+            <input name="history_date_to" type="date" defaultValue={historyDateTo} />
           </div>
           {profile.role === "admin" ? (
             <div className="field">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
@@ -52,14 +53,18 @@ export function SalesReportForm({
   selectedStoreId: string;
   stores: Store[];
 }) {
-  const [systemNominal, setSystemNominal] = useState(Number(report?.system_nominal ?? 0));
-  const [cashCounts, setCashCounts] = useState<CashCounts>(() => initialCash(report));
-  const [qris, setQris] = useState(Number(report?.qris ?? 0));
-  const [debit, setDebit] = useState(Number(report?.debit ?? 0));
-  const [shopee, setShopee] = useState(Number(report?.shopee ?? 0));
-  const [grab, setGrab] = useState(Number(report?.grab ?? 0));
-  const [gojek, setGojek] = useState(Number(report?.gojek ?? 0));
-  const [expense, setExpense] = useState(Number(report?.expense ?? 0));
+  const searchParams = useSearchParams();
+  const justSaved = searchParams.get("saved") === "1";
+  const effectiveReport = justSaved ? null : report;
+
+  const [systemNominal, setSystemNominal] = useState(Number(effectiveReport?.system_nominal ?? 0));
+  const [cashCounts, setCashCounts] = useState<CashCounts>(() => initialCash(effectiveReport));
+  const [qris, setQris] = useState(Number(effectiveReport?.qris ?? 0));
+  const [debit, setDebit] = useState(Number(effectiveReport?.debit ?? 0));
+  const [shopee, setShopee] = useState(Number(effectiveReport?.shopee ?? 0));
+  const [grab, setGrab] = useState(Number(effectiveReport?.grab ?? 0));
+  const [gojek, setGojek] = useState(Number(effectiveReport?.gojek ?? 0));
+  const [expense, setExpense] = useState(Number(effectiveReport?.expense ?? 0));
 
   const cashTotal = useMemo(
     () => denominations.reduce((total, denomination) => total + cashCounts[`cash_${denomination}`] * denomination, 0),
@@ -180,12 +185,12 @@ export function SalesReportForm({
 
       <div className="field">
         <label>Rincian Pengeluaran</label>
-        <textarea defaultValue={report?.expense_detail ?? ""} name="expense_detail" placeholder="Contoh: beli plastik, parkir, dll" rows={3} />
+        <textarea defaultValue={effectiveReport?.expense_detail ?? ""} name="expense_detail" placeholder="Contoh: beli plastik, parkir, dll" rows={3} />
       </div>
 
       <div className="field">
         <label>Note</label>
-        <textarea defaultValue={report?.notes ?? ""} name="notes" placeholder="Alasan jika ada selisih plus/minus" rows={3} />
+        <textarea defaultValue={effectiveReport?.notes ?? ""} name="notes" placeholder="Alasan jika ada selisih plus/minus" rows={3} />
       </div>
 
       <div className="row-actions">
