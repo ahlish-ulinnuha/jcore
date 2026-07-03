@@ -12,7 +12,7 @@ function text(formData: FormData, key: string) {
 }
 
 function numberValue(formData: FormData, key: string) {
-  const value = Number(text(formData, key));
+  const value = Number(text(formData, key).replace(/\./g, ""));
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
+import { HistoryDateRangeField } from "./HistoryDateRangeField";
 import { SalesDetailButton } from "./SalesDetailButton";
 import { SalesReportForm } from "./SalesReportForm";
 import { SalesSavedModal } from "./SalesSavedModal";
@@ -381,14 +382,13 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
         <form className="filter-grid" style={{ marginBottom: 14 }}>
           <input name="date" type="hidden" value={reportDate} />
           <input name="store" type="hidden" value={selectedStoreId} />
-          <div className="field">
-            <label>Dari Tanggal</label>
-            <input name="history_date_from" type="date" defaultValue={historyDateFrom} />
-          </div>
-          <div className="field">
-            <label>Sampai Tanggal</label>
-            <input name="history_date_to" type="date" defaultValue={historyDateTo} />
-          </div>
+          <HistoryDateRangeField
+            defaultFrom={historyDateFrom}
+            defaultTo={historyDateTo}
+            label="Tanggal History"
+            nameFrom="history_date_from"
+            nameTo="history_date_to"
+          />
           {profile.role === "admin" ? (
             <div className="field">
               <label>Store History</label>

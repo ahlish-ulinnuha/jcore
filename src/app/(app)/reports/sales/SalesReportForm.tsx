@@ -31,6 +31,41 @@ function selectZero(event: React.FocusEvent<HTMLInputElement>) {
   }
 }
 
+function formatMoneyInput(value: number) {
+  return value.toLocaleString("id-ID");
+}
+
+function parseMoneyInput(value: string) {
+  const digitsOnly = value.replace(/\D/g, "");
+  return digitsOnly ? Number(digitsOnly) : 0;
+}
+
+function MoneyField({
+  label,
+  name,
+  onChange,
+  value,
+}: {
+  label: string;
+  name: string;
+  onChange: (value: number) => void;
+  value: number;
+}) {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <input
+        inputMode="numeric"
+        name={name}
+        onChange={(event) => onChange(parseMoneyInput(event.target.value))}
+        onFocus={selectZero}
+        type="text"
+        value={formatMoneyInput(value)}
+      />
+    </div>
+  );
+}
+
 function SaveButton() {
   const { pending } = useFormStatus();
   return (
@@ -109,18 +144,7 @@ export function SalesReportForm({
       <div className="sales-layout">
         <section className="sales-card">
           <h2>Nominal System</h2>
-          <div className="field">
-            <label>Nominal System</label>
-            <input
-              min="0"
-              name="system_nominal"
-              onChange={(event) => setSystemNominal(Number(event.target.value) || 0)}
-              onFocus={selectZero}
-              step="1"
-              type="number"
-              value={systemNominal}
-            />
-          </div>
+          <MoneyField label="Nominal System" name="system_nominal" onChange={setSystemNominal} value={systemNominal} />
           <div className="sales-total-card">
             <span>Total Input</span>
             <strong>{formatRupiah(cashTotal + qris + debit + shopee + grab + gojek + expense)}</strong>
@@ -157,30 +181,12 @@ export function SalesReportForm({
       </div>
 
       <div className="sales-payment-grid">
-        <div className="field">
-          <label>Qris</label>
-          <input min="0" name="qris" onChange={(event) => setQris(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={qris} />
-        </div>
-        <div className="field">
-          <label>Debit</label>
-          <input min="0" name="debit" onChange={(event) => setDebit(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={debit} />
-        </div>
-        <div className="field">
-          <label>Shopee</label>
-          <input min="0" name="shopee" onChange={(event) => setShopee(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={shopee} />
-        </div>
-        <div className="field">
-          <label>Grab</label>
-          <input min="0" name="grab" onChange={(event) => setGrab(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={grab} />
-        </div>
-        <div className="field">
-          <label>Gojek</label>
-          <input min="0" name="gojek" onChange={(event) => setGojek(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={gojek} />
-        </div>
-        <div className="field">
-          <label>Pengeluaran</label>
-          <input min="0" name="expense" onChange={(event) => setExpense(Number(event.target.value) || 0)} onFocus={selectZero} step="1" type="number" value={expense} />
-        </div>
+        <MoneyField label="Qris" name="qris" onChange={setQris} value={qris} />
+        <MoneyField label="Debit" name="debit" onChange={setDebit} value={debit} />
+        <MoneyField label="Shopee" name="shopee" onChange={setShopee} value={shopee} />
+        <MoneyField label="Grab" name="grab" onChange={setGrab} value={grab} />
+        <MoneyField label="Gojek" name="gojek" onChange={setGojek} value={gojek} />
+        <MoneyField label="Pengeluaran" name="expense" onChange={setExpense} value={expense} />
       </div>
 
       <div className="field">
