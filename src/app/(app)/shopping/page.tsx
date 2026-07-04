@@ -309,10 +309,15 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
       return map;
     }, new Map<string, number>()),
   ).sort((a, b) => a[0].localeCompare(b[0]));
+  const paymentStatusTotals = [
+    ["Paid", chartRows.filter((row) => isPaymentStatusPaid(row.paymentStatus)).reduce((sum, row) => sum + row.nominal, 0), chartRows.filter((row) => isPaymentStatusPaid(row.paymentStatus)).length],
+    ["Unpaid", chartRows.filter((row) => !isPaymentStatusPaid(row.paymentStatus)).reduce((sum, row) => sum + row.nominal, 0), chartRows.filter((row) => !isPaymentStatusPaid(row.paymentStatus)).length],
+  ] as const;
   const maxCategoryTotal = Math.max(...categoryTotals.map(([, total]) => total), 1);
   const maxPaymentTotal = Math.max(...paymentTotals.map(([, total]) => total), 1);
   const maxStoreTotal = Math.max(...storeTotals.map(([, total]) => total), 1);
   const maxDailyTotal = Math.max(...dailyTotals.map(([, total]) => total), 1);
+  const maxPaymentStatusTotal = Math.max(...paymentStatusTotals.map(([, total]) => total), 1);
   const resetChartParams = new URLSearchParams();
   if (selectedStoreId) resetChartParams.set("store", selectedStoreId);
   const currentPage = Math.max(1, Number(params.page ?? 1) || 1);
@@ -458,6 +463,14 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
             <span>Rata-rata</span>
             <strong>{formatRupiah(averageShopping)}</strong>
           </div>
+          <div className="shopping-dashboard-card paid">
+            <span>Sudah Dibayar</span>
+            <strong>{formatRupiah(paymentStatusTotals[0][1])}</strong>
+          </div>
+          <div className="shopping-dashboard-card unpaid">
+            <span>Belum Dibayar</span>
+            <strong>{formatRupiah(paymentStatusTotals[1][1])}</strong>
+          </div>
         </div>
 
         <div className="shopping-chart-grid">
@@ -506,6 +519,26 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                     <span>{payment}</span>
                     <div>
                       <i style={{ width: `${Math.max(4, (total / maxPaymentTotal) * 100)}%` }} />
+                    </div>
+                    <strong>{formatRupiah(total)}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">Belum ada data sesuai filter.</p>
+            )}
+          </div>
+          <div className="shopping-chart-card">
+            <h3>Status Pembayaran</h3>
+            {chartRows.length ? (
+              <div className="shopping-chart-bars">
+                {paymentStatusTotals.map(([status, total, count]) => (
+                  <div className="shopping-chart-row" key={status}>
+                    <span>
+                      <span className={`payment-status-badge ${status === "Paid" ? "paid" : "unpaid"}`}>{status}</span> ({count})
+                    </span>
+                    <div>
+                      <i style={{ width: `${Math.max(4, (total / maxPaymentStatusTotal) * 100)}%` }} />
                     </div>
                     <strong>{formatRupiah(total)}</strong>
                   </div>
