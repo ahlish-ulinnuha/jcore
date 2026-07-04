@@ -2428,6 +2428,30 @@ th {
   background: #fff7f7;
 }
 
+.overtime-day-name {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.overtime-table td {
+  position: relative;
+}
+
+.overtime-cell-noted {
+  cursor: help;
+}
+
+.overtime-note-dot {
+  background: var(--primary);
+  border-radius: 50%;
+  display: block;
+  height: 5px;
+  margin: 2px auto 0;
+  width: 5px;
+}
+
 .dashboard-schedule-panel {
   margin-top: 18px;
 }
@@ -2752,6 +2776,25 @@ th {
 .sales-difference {
   font-weight: 900;
   white-space: nowrap;
+}
+
+.payment-status-badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.payment-status-badge.paid {
+  background: rgba(37, 117, 76, 0.14);
+  color: var(--ok);
+}
+
+.payment-status-badge.unpaid {
+  background: rgba(217, 87, 60, 0.14);
+  color: var(--danger);
 }
 
 .activity-history {

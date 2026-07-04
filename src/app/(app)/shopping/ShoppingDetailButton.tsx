@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 
+function paymentStatusLabel(value: string | null) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized === "paid" || normalized === "lunas" || normalized === "sudah_lunas" || normalized === "sudah dibayar") return "Paid";
+  if (normalized === "unpaid" || normalized === "belum_lunas" || normalized === "belum dibayar") return "Unpaid";
+  return "-";
+}
+
 export function ShoppingDetailButton({
   notes,
   paymentMethod,
+  paymentStatus,
 }: {
   notes: string | null;
   paymentMethod: string | null;
+  paymentStatus?: string | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -31,6 +40,10 @@ export function ShoppingDetailButton({
             <div className="detail-block">
               <span>Metode Pembayaran</span>
               <p>{paymentMethod?.trim() || "-"}</p>
+            </div>
+            <div className="detail-block">
+              <span>Status Pembayaran</span>
+              <p>{paymentStatusLabel(paymentStatus ?? null)}</p>
             </div>
             <div className="detail-block">
               <span>Catatan</span>

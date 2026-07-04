@@ -47,6 +47,8 @@ type SearchParams = Promise<{
   store?: string;
 }>;
 
+const cashDenominations = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100] as const;
+
 const salesMethodOptions = [
   { key: "all", label: "All Metode" },
   { key: "cash", label: "Cash" },
@@ -176,10 +178,17 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
       return map;
     }, new Map<string, number>()),
   ).sort((a, b) => a[0].localeCompare(b[0]));
+  const cashDenominationTotals = cashDenominations.map((denomination) => {
+    const key = `cash_${denomination}` as keyof DailySalesReport;
+    const count = chartRows.reduce((sum, item) => sum + Number(item[key] ?? 0), 0);
+    return [denomination, count, count * denomination] as const;
+  });
+  const cashDenominationGrandTotal = cashDenominationTotals.reduce((sum, [, , total]) => sum + total, 0);
   const maxPaymentTotal = Math.max(...paymentTotals.map(([, total]) => total), 1);
   const maxOnlineTotal = Math.max(...onlineTotals.map(([, total]) => total), 1);
   const maxStoreTotal = Math.max(...storeTotals.map(([, total]) => total), 1);
   const maxDailyTotal = Math.max(...dailyTotals.map(([, total]) => total), 1);
+  const maxCashDenominationTotal = Math.max(...cashDenominationTotals.map(([, , total]) => total), 1);
   const totalPages = Math.max(1, Math.ceil((historyCount ?? 0) / pageSize));
   const historyParams = new URLSearchParams();
   historyParams.set("date", reportDate);
@@ -369,6 +378,26 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
                 </div>
               ) : (
                 <p className="muted">Belum ada data store sesuai filter.</p>
+              )}
+            </div>
+            <div className="sales-chart-box">
+              <h3>Rincian Tunai</h3>
+              {cashDenominationGrandTotal ? (
+                <div className="sales-chart-bars">
+                  {cashDenominationTotals
+                    .filter(([, , total]) => total > 0)
+                    .map(([denomination, count, total]) => (
+                      <div className="sales-chart-row" key={denomination}>
+                        <span>{denomination.toLocaleString("id-ID")} ({count}x)</span>
+                        <div>
+                          <i style={{ width: `${Math.max(4, (total / maxCashDenominationTotal) * 100)}%` }} />
+                        </div>
+                        <strong>{formatRupiah(total)}</strong>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="muted">Belum ada data rincian tunai sesuai filter.</p>
               )}
             </div>
           </div>

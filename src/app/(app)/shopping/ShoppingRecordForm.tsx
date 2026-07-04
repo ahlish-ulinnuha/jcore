@@ -107,6 +107,13 @@ export function ShoppingRecordForm({
         </select>
       </div>
       <div className="field">
+        <label>Status Pembayaran</label>
+        <select name="payment_status" defaultValue="unpaid">
+          <option value="unpaid">Unpaid</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+      <div className="field">
         <label>Catatan</label>
         <input name="notes" placeholder="Opsional" />
       </div>
