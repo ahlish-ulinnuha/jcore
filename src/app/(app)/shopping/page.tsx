@@ -26,6 +26,7 @@ type SearchParams = Promise<{
   history_date?: string;
   page?: string;
   page_size?: string;
+  payment_status?: string;
   q?: string;
   saved?: string;
   sort?: string;
@@ -40,6 +41,7 @@ type ShoppingSheetRow = {
   nominal: number;
   notes: string;
   paymentMethod: string;
+  paymentStatus: string;
   source: string;
   storeCode: string;
   storeId: string;
@@ -136,6 +138,7 @@ function normalizeSheetRows(rawRows: unknown): ShoppingSheetRow[] {
           nominal: Number(row[2] ?? 0),
           kategori: String(row[3] ?? ""),
           paymentMethod: hasPaymentStoreColumns ? String(row[4] ?? "") : "",
+          paymentStatus: "",
           notes: "",
           source: hasPaymentStoreColumns ? String(row[6] ?? "") : String(row[4] ?? ""),
           command: hasPaymentStoreColumns ? String(row[7] ?? "") : String(row[5] ?? ""),
@@ -153,6 +156,11 @@ function normalizeSheetRows(rawRows: unknown): ShoppingSheetRow[] {
           nominal: Number(fieldValue(record, ["nominal", "amount", "total"]) ?? 0),
           kategori: String(fieldValue(record, ["kategori", "category"]) ?? ""),
           paymentMethod: String(fieldValue(record, ["metode pembayaran", "payment_method", "paymentMethod", "payment"]) ?? ""),
+          paymentStatus: String(
+            fieldValue(record, ["status pembayaran", "status_pembayaran", "payment_status", "paymentStatus", "status bayar"]) ||
+              nestedDataValue(record, ["payment_status", "paymentStatus"]) ||
+              "",
+          ),
           notes: String(fieldValue(record, ["catatan", "notes", "note"]) ?? ""),
           source: String(fieldValue(record, ["sumber", "source"]) ?? ""),
           command: String(fieldValue(record, ["command", "text"]) ?? ""),
@@ -173,6 +181,18 @@ function monthStartJakarta() {
 
 function normalizeOption(value: string) {
   return value.trim().toLowerCase();
+}
+
+function paymentStatusLabel(value: string) {
+  const normalized = normalizeOption(value);
+  if (normalized === "lunas" || normalized === "paid" || normalized === "sudah_lunas" || normalized === "sudah dibayar") return "Sudah Dibayar";
+  if (normalized === "belum_lunas" || normalized === "unpaid" || normalized === "belum dibayar") return "Belum Dibayar";
+  return "-";
+}
+
+function isPaymentStatusPaid(value: string) {
+  const normalized = normalizeOption(value);
+  return normalized === "lunas" || normalized === "paid" || normalized === "sudah_lunas" || normalized === "sudah dibayar";
 }
 
 async function fetchShoppingRows() {
@@ -231,6 +251,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   const chartDateFrom = params.chart_date_from ?? monthStartJakarta();
   const chartDateTo = params.chart_date_to ?? todayJakarta();
   const historyDate = params.history_date ?? "";
+  const selectedPaymentStatus = params.payment_status ?? "all";
   const descriptionQuery = (params.q ?? "").trim().toLowerCase();
   const selectedSort = params.sort ?? "date_desc";
   const categoryOptions = Array.from(
@@ -300,7 +321,10 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
       const matchesDate = !historyDate || filterDateValue(row.tanggal) === historyDate;
       const matchesCategory = selectedCategory === "all" || row.kategori === selectedCategory;
       const matchesDescription = !descriptionQuery || row.description.toLowerCase().includes(descriptionQuery);
-      return matchesDate && matchesCategory && matchesDescription;
+      const matchesPaymentStatus =
+        selectedPaymentStatus === "all" ||
+        (selectedPaymentStatus === "lunas" ? isPaymentStatusPaid(row.paymentStatus) : !isPaymentStatusPaid(row.paymentStatus));
+      return matchesDate && matchesCategory && matchesDescription && matchesPaymentStatus;
     })
     .sort((a, b) => {
       if (selectedSort === "date_asc") return dateSortValue(a.tanggal) - dateSortValue(b.tanggal);
@@ -315,6 +339,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   if (selectedStoreId) historyParams.set("store", selectedStoreId);
   if (historyDate) historyParams.set("history_date", historyDate);
   if (selectedCategory !== "all") historyParams.set("category", selectedCategory);
+  if (selectedPaymentStatus !== "all") historyParams.set("payment_status", selectedPaymentStatus);
   if (params.q) historyParams.set("q", params.q);
   historyParams.set("page_size", String(pageSize));
   historyParams.set("sort", selectedSort);
@@ -535,6 +560,14 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
             </select>
           </div>
           <div className="field">
+            <label>Status Pembayaran</label>
+            <select name="payment_status" defaultValue={selectedPaymentStatus}>
+              <option value="all">All Status</option>
+              <option value="lunas">Sudah Dibayar</option>
+              <option value="belum_lunas">Belum Dibayar</option>
+            </select>
+          </div>
+          <div className="field">
             <label>Deskripsi</label>
             <input name="q" defaultValue={params.q ?? ""} placeholder="Cari deskripsi..." />
           </div>
@@ -576,6 +609,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                   <th>Nominal</th>
                   <th>Kategori</th>
                   <th>Metode</th>
+                  <th>Status</th>
                   <th>Detail</th>
                 </tr>
               </thead>
@@ -588,7 +622,12 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                     <td>{row.kategori || "-"}</td>
                     <td>{row.paymentMethod || "-"}</td>
                     <td>
-                      <ShoppingDetailButton notes={row.notes} paymentMethod={row.paymentMethod} />
+                      <span className={`payment-status-badge ${isPaymentStatusPaid(row.paymentStatus) ? "paid" : "unpaid"}`}>
+                        {paymentStatusLabel(row.paymentStatus)}
+                      </span>
+                    </td>
+                    <td>
+                      <ShoppingDetailButton notes={row.notes} paymentMethod={row.paymentMethod} paymentStatus={row.paymentStatus} />
                     </td>
                   </tr>
                 ))}

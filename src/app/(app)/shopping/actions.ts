@@ -41,6 +41,7 @@ export async function saveShoppingRecord(formData: FormData) {
   const category = text(formData, "category") || "belanja";
   const notes = text(formData, "notes");
   const paymentMethod = text(formData, "payment_method") || "cash";
+  const paymentStatus = text(formData, "payment_status") || "belum_lunas";
   const recordDate = text(formData, "record_date");
   const commandText = `/belanja @${description} @${totalPrice} @${category}`;
   const payload = {
@@ -53,8 +54,10 @@ export async function saveShoppingRecord(formData: FormData) {
     nominal: totalPrice,
     notes,
     payment_method: paymentMethod,
+    payment_status: paymentStatus,
     record_date: recordDate,
     source: "jcore-web",
+    status_pembayaran: paymentStatus,
     store: store.code || store.name,
     store_code: store.code,
     store_id: store.id,
@@ -69,6 +72,7 @@ export async function saveShoppingRecord(formData: FormData) {
       description,
       notes: notes || null,
       payment_method: paymentMethod,
+      payment_status: paymentStatus,
       record_date: recordDate,
       recorded_by_email: profile.email ?? user.email ?? null,
       recorded_by_id: user.id,

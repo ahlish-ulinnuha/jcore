@@ -107,6 +107,13 @@ export function ShoppingRecordForm({
         </select>
       </div>
       <div className="field">
+        <label>Status Pembayaran</label>
+        <select name="payment_status" defaultValue="belum_lunas">
+          <option value="belum_lunas">Belum Dibayar</option>
+          <option value="lunas">Sudah Dibayar</option>
+        </select>
+      </div>
+      <div className="field">
         <label>Catatan</label>
         <input name="notes" placeholder="Opsional" />
       </div>
