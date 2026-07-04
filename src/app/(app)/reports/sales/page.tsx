@@ -100,14 +100,14 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
   const selectedStoreId = profile.role === "admin" ? params.store ?? stores?.[0]?.id ?? "" : profile.store_id ?? "";
   const chartStore = profile.role === "admin" ? params.chart_store ?? "all" : profile.store_id ?? "all";
 
-  const { data: report } = selectedStoreId
-    ? await supabase
+  const reportQuery = selectedStoreId
+    ? supabase
         .from("daily_sales_reports")
         .select("*")
         .eq("report_date", reportDate)
         .eq("store_id", selectedStoreId)
         .maybeSingle<DailySalesReport>()
-    : { data: null };
+    : Promise.resolve({ data: null as DailySalesReport | null });
 
   const historyQuery = supabase
     .from("daily_sales_reports")
@@ -132,7 +132,6 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
     historyQuery.lte("report_date", historyDateTo);
   }
 
-  const { data: historyReports, count: historyCount } = await historyQuery.returns<DailySalesReport[]>();
   const chartQuery = supabase
     .from("daily_sales_reports")
     .select("*")
@@ -147,7 +146,11 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
     chartQuery.eq("store_id", profile.store_id);
   }
 
-  const { data: chartReports } = profile.role === "admin" ? await chartQuery.returns<DailySalesReport[]>() : { data: [] as DailySalesReport[] };
+  const [{ data: report }, { data: historyReports, count: historyCount }, { data: chartReports }] = await Promise.all([
+    reportQuery,
+    historyQuery.returns<DailySalesReport[]>(),
+    profile.role === "admin" ? chartQuery.returns<DailySalesReport[]>() : Promise.resolve({ data: [] as DailySalesReport[] }),
+  ]);
   const chartRows = chartReports ?? [];
   const chartTotal = chartRows.reduce((sum, item) => sum + salesValueByMethod(item, chartMethod), 0);
   const chartAverage = chartRows.length ? chartTotal / chartRows.length : 0;

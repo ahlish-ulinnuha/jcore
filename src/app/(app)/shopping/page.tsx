@@ -213,12 +213,14 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   if (!profile || profile.role === "vendor") redirect("/dashboard");
 
   const params = await searchParams;
-  const { data: stores } = profile.role === "admin"
-    ? await supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>()
-    : { data: [] as Store[] };
+  const [{ data: stores }, shoppingHistory] = await Promise.all([
+    profile.role === "admin"
+      ? supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>()
+      : Promise.resolve({ data: [] as Store[] }),
+    fetchShoppingRows(),
+  ]);
   const selectedStoreId = profile.role === "admin" ? params.store ?? stores?.[0]?.id ?? "" : profile.store_id ?? "";
   const error = errorMessage(params.error, params.status);
-  const shoppingHistory = await fetchShoppingRows();
   const pageSizeOptions = [10, 20, 50, 100, 500];
   const requestedPageSize = Number(params.page_size ?? 10);
   const pageSize = pageSizeOptions.includes(requestedPageSize) ? requestedPageSize : 10;
