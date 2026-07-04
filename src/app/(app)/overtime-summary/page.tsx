@@ -45,6 +45,10 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function dayName(date: string) {
+  return new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", weekday: "short" }).format(new Date(`${date}T00:00:00+07:00`));
+}
+
 function capitalizeWords(value: string) {
   return value
     .toLowerCase()
@@ -203,7 +207,10 @@ export default async function OvertimeSummaryPage({ searchParams }: { searchPara
               <tr>
                 <th>Staff - Store</th>
                 {monthDates.map((date) => (
-                  <th key={date}>{date.slice(8)}</th>
+                  <th key={date}>
+                    <div>{date.slice(8)}</div>
+                    <div className="overtime-day-name">{dayName(date)}</div>
+                  </th>
                 ))}
                 <th>F</th>
                 <th>MF</th>
@@ -217,9 +224,16 @@ export default async function OvertimeSummaryPage({ searchParams }: { searchPara
                 staffSummaries.map((summary) => (
                   <tr key={summary.staff.id}>
                     <th>{capitalizeWords(summary.staff.full_name)} - {staffStoreCode(summary.staff)}</th>
-                    {monthDates.map((date) => (
-                      <td key={date}>{scheduleMap.get(`${summary.staff.id}:${date}`)?.shift_code ?? "-"}</td>
-                    ))}
+                    {monthDates.map((date) => {
+                      const schedule = scheduleMap.get(`${summary.staff.id}:${date}`);
+                      const note = schedule?.notes?.trim();
+                      return (
+                        <td className={note ? "overtime-cell-noted" : undefined} key={date} title={note || undefined}>
+                          {schedule?.shift_code ?? "-"}
+                          {note ? <span className="overtime-note-dot" /> : null}
+                        </td>
+                      );
+                    })}
                     <td>{summary.fCount}</td>
                     <td>{summary.mfCount}</td>
                     <td>{summary.mfpCount}</td>
