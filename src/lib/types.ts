@@ -15,6 +15,9 @@ export type Store = {
   name: string;
   code: string | null;
   is_active: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  geofence_radius_m: number;
 };
 
 export type Vendor = {
@@ -133,6 +136,25 @@ export type StoreStaffSchedule = {
   notes: string | null;
   created_by: string | null;
   updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StaffAttendance = {
+  id: string;
+  staff_id: string;
+  store_id: string;
+  check_in_at: string;
+  check_in_latitude: number;
+  check_in_longitude: number;
+  check_in_accuracy: number | null;
+  check_in_distance_m: number | null;
+  check_out_at: string | null;
+  check_out_latitude: number | null;
+  check_out_longitude: number | null;
+  check_out_accuracy: number | null;
+  check_out_distance_m: number | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 };

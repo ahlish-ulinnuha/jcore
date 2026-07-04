@@ -7,6 +7,7 @@ export const mainMenuItems = [
   { href: "/reports/spices", key: "report_spices", label: "Report Bumbu", roles: ["admin", "staff"] },
   { href: "/reports/sales", key: "report_sales", label: "Report Sales", roles: ["admin", "staff"] },
   { href: "/shopping", key: "shopping", label: "Belanja", roles: ["admin", "staff"] },
+  { href: "/attendance", key: "attendance", label: "Absensi", roles: ["admin", "staff"] },
   { href: "/schedules", key: "schedules", label: "Schedule", roles: ["admin", "staff"] },
   { href: "/schedules/requests", key: "schedule_requests", label: "Request Schedule", roles: ["admin"] },
   { href: "/overtime-summary", key: "overtime_summary", label: "Overtime Summary", roles: ["admin"] },

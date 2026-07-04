@@ -328,6 +328,12 @@ textarea {
   color: #fff;
 }
 
+.button.outline.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
 .button.soft-primary {
   background: var(--primary-soft);
   border-color: #e6c3c2;
@@ -2795,6 +2801,45 @@ th {
 .payment-status-badge.unpaid {
   background: rgba(217, 87, 60, 0.14);
   color: var(--danger);
+}
+
+.attendance-panel {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.attendance-status {
+  display: grid;
+  gap: 8px;
+}
+
+.attendance-status p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.attendance-check-form {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  min-width: 220px;
+}
+
+.attendance-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0;
+}
+
+.dashboard-attendance-card {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
 }
 
 .activity-history {
