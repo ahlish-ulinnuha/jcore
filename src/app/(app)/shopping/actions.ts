@@ -41,7 +41,7 @@ export async function saveShoppingRecord(formData: FormData) {
   const category = text(formData, "category") || "belanja";
   const notes = text(formData, "notes");
   const paymentMethod = text(formData, "payment_method") || "cash";
-  const paymentStatus = text(formData, "payment_status") || "belum_lunas";
+  const paymentStatus = text(formData, "payment_status") || "unpaid";
   const recordDate = text(formData, "record_date");
   const commandText = `/belanja @${description} @${totalPrice} @${category}`;
   const payload = {

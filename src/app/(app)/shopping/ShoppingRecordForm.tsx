@@ -108,9 +108,9 @@ export function ShoppingRecordForm({
       </div>
       <div className="field">
         <label>Status Pembayaran</label>
-        <select name="payment_status" defaultValue="belum_lunas">
-          <option value="belum_lunas">Belum Dibayar</option>
-          <option value="lunas">Sudah Dibayar</option>
+        <select name="payment_status" defaultValue="unpaid">
+          <option value="unpaid">Unpaid</option>
+          <option value="paid">Paid</option>
         </select>
       </div>
       <div className="field">

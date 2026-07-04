@@ -185,14 +185,14 @@ function normalizeOption(value: string) {
 
 function paymentStatusLabel(value: string) {
   const normalized = normalizeOption(value);
-  if (normalized === "lunas" || normalized === "paid" || normalized === "sudah_lunas" || normalized === "sudah dibayar") return "Sudah Dibayar";
-  if (normalized === "belum_lunas" || normalized === "unpaid" || normalized === "belum dibayar") return "Belum Dibayar";
+  if (normalized === "paid" || normalized === "lunas" || normalized === "sudah_lunas" || normalized === "sudah dibayar") return "Paid";
+  if (normalized === "unpaid" || normalized === "belum_lunas" || normalized === "belum dibayar") return "Unpaid";
   return "-";
 }
 
 function isPaymentStatusPaid(value: string) {
   const normalized = normalizeOption(value);
-  return normalized === "lunas" || normalized === "paid" || normalized === "sudah_lunas" || normalized === "sudah dibayar";
+  return normalized === "paid" || normalized === "lunas" || normalized === "sudah_lunas" || normalized === "sudah dibayar";
 }
 
 async function fetchShoppingRows() {
@@ -323,7 +323,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
       const matchesDescription = !descriptionQuery || row.description.toLowerCase().includes(descriptionQuery);
       const matchesPaymentStatus =
         selectedPaymentStatus === "all" ||
-        (selectedPaymentStatus === "lunas" ? isPaymentStatusPaid(row.paymentStatus) : !isPaymentStatusPaid(row.paymentStatus));
+        (selectedPaymentStatus === "paid" ? isPaymentStatusPaid(row.paymentStatus) : !isPaymentStatusPaid(row.paymentStatus));
       return matchesDate && matchesCategory && matchesDescription && matchesPaymentStatus;
     })
     .sort((a, b) => {
@@ -563,8 +563,8 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
             <label>Status Pembayaran</label>
             <select name="payment_status" defaultValue={selectedPaymentStatus}>
               <option value="all">All Status</option>
-              <option value="lunas">Sudah Dibayar</option>
-              <option value="belum_lunas">Belum Dibayar</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Unpaid</option>
             </select>
           </div>
           <div className="field">

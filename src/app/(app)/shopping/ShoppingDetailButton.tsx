@@ -4,8 +4,8 @@ import { useState } from "react";
 
 function paymentStatusLabel(value: string | null) {
   const normalized = (value ?? "").trim().toLowerCase();
-  if (normalized === "lunas" || normalized === "paid" || normalized === "sudah_lunas" || normalized === "sudah dibayar") return "Sudah Dibayar";
-  if (normalized === "belum_lunas" || normalized === "unpaid" || normalized === "belum dibayar") return "Belum Dibayar";
+  if (normalized === "paid" || normalized === "lunas" || normalized === "sudah_lunas" || normalized === "sudah dibayar") return "Paid";
+  if (normalized === "unpaid" || normalized === "belum_lunas" || normalized === "belum dibayar") return "Unpaid";
   return "-";
 }
 
