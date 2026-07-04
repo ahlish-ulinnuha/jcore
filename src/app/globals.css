@@ -328,6 +328,12 @@ textarea {
   color: #fff;
 }
 
+.button.outline.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
 .button.soft-primary {
   background: var(--primary-soft);
   border-color: #e6c3c2;

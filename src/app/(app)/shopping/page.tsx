@@ -349,6 +349,9 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   nextParams.set("page", String(Math.min(totalPages, activePage + 1)));
   const resetHistoryParams = new URLSearchParams();
   if (selectedStoreId) resetHistoryParams.set("store", selectedStoreId);
+  const unpaidHistoryParams = new URLSearchParams();
+  if (selectedStoreId) unpaidHistoryParams.set("store", selectedStoreId);
+  unpaidHistoryParams.set("payment_status", "unpaid");
 
   return (
     <>
@@ -596,6 +599,9 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
           </button>
           <a className="button outline" href={`/shopping?${resetHistoryParams}`}>
             Reset
+          </a>
+          <a className={`button outline ${selectedPaymentStatus === "unpaid" ? "active" : ""}`} href={`/shopping?${unpaidHistoryParams}`}>
+            Tampilkan Unpaid
           </a>
         </form>
         {shoppingHistory.error ? <div className="alert">{shoppingHistory.error}</div> : null}
