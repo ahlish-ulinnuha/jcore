@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, PurchaseRequest, ShiftType, StoreStaffSchedule } from "@/lib/types";
+import type { Profile, PurchaseRequest, ShiftType, StaffAttendance, StoreStaffSchedule } from "@/lib/types";
 import { RequestStatusForm } from "./RequestStatusForm";
 
 function todayJakarta() {
@@ -27,6 +27,10 @@ function addDays(dateValue: string, days: number) {
     month: "2-digit",
     day: "2-digit",
   }).format(date);
+}
+
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat("id-ID", { timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(value));
 }
 
 function displayDate(value: string) {
@@ -113,6 +117,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
   const shiftTypesQuery = staffStoreId
     ? supabase.from("shift_types").select("*").eq("is_active", true).order("sort_order").returns<ShiftType[]>()
     : null;
+  const openAttendanceQuery =
+    profile.role === "staff"
+      ? supabase.from("staff_attendance").select("*").eq("staff_id", profile.id).is("check_out_at", null).maybeSingle<StaffAttendance>()
+      : null;
+  const todayAttendanceCountQuery =
+    profile.role === "admin"
+      ? supabase
+          .from("staff_attendance")
+          .select("id", { count: "exact", head: true })
+          .gte("check_in_at", `${today}T00:00:00+07:00`)
+          .lte("check_in_at", `${today}T23:59:59+07:00`)
+      : null;
+  const openAttendanceCountQuery =
+    profile.role === "admin" ? supabase.from("staff_attendance").select("id", { count: "exact", head: true }).is("check_out_at", null) : null;
 
   if (staffStoreId) {
     requestCountQuery.eq("store_id", staffStoreId);
@@ -120,18 +138,33 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     unavailableQuery.eq("purchase_requests.store_id", staffStoreId);
   }
 
-  const [{ count: requestCount }, { data: requests }, { count: unavailableCount }, scheduleResult, shiftTypeResult] = await Promise.all([
+  const [
+    { count: requestCount },
+    { data: requests },
+    { count: unavailableCount },
+    scheduleResult,
+    shiftTypeResult,
+    openAttendanceResult,
+    todayAttendanceCountResult,
+    openAttendanceCountResult,
+  ] = await Promise.all([
     requestCountQuery,
     requestsQuery.returns<PurchaseRequest[]>(),
     unavailableQuery,
     scheduleQuery ?? Promise.resolve({ data: [] as StoreStaffSchedule[] }),
     shiftTypesQuery ?? Promise.resolve({ data: [] as ShiftType[] }),
+    openAttendanceQuery ?? Promise.resolve({ data: null as StaffAttendance | null }),
+    todayAttendanceCountQuery ?? Promise.resolve({ count: 0 }),
+    openAttendanceCountQuery ?? Promise.resolve({ count: 0 }),
   ]);
 
   const requestRows = requests ?? [];
   const scheduleMap = new Map((scheduleResult.data ?? []).map((schedule) => [schedule.work_date, schedule]));
   const shiftMap = new Map((shiftTypeResult.data ?? []).map((shift) => [shift.code, shift]));
   const scheduleError = "error" in scheduleResult ? scheduleResult.error : null;
+  const openAttendance = openAttendanceResult.data;
+  const todayAttendanceCount = todayAttendanceCountResult.count ?? 0;
+  const openAttendanceCount = openAttendanceCountResult.count ?? 0;
 
   return (
     <>
@@ -157,6 +190,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
           <span className="muted">Perlu perhatian</span>
           <strong>{unavailableCount ?? 0}</strong>
         </div>
+      </section>
+
+      <section className="panel dashboard-attendance-card" style={{ marginTop: 16 }}>
+        {profile.role === "staff" ? (
+          <>
+            <div>
+              <p className="eyebrow">Absensi Hari Ini</p>
+              <strong>{openAttendance ? `Check-in ${formatTime(openAttendance.check_in_at)} - Sedang bekerja` : "Belum check-in"}</strong>
+            </div>
+            <Link className="button primary" href="/attendance">
+              {openAttendance ? "Check Out" : "Check In"}
+            </Link>
+          </>
+        ) : (
+          <>
+            <div>
+              <p className="eyebrow">Absensi Hari Ini</p>
+              <strong>{todayAttendanceCount} absensi tercatat, {openAttendanceCount} sedang bekerja</strong>
+            </div>
+            <Link className="button outline" href="/attendance">
+              Lihat Absensi
+            </Link>
+          </>
+        )}
       </section>
 
       {profile.role === "staff" ? (

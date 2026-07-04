@@ -27,6 +27,13 @@ function checked(formData: FormData, key: string) {
   return formData.getAll(key).some((value) => ["1", "on", "true"].includes(String(value)));
 }
 
+function numberOrNull(formData: FormData, key: string) {
+  const value = text(formData, key);
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function normalizeAlias(value: string) {
   return value
     .toLowerCase()
@@ -51,6 +58,9 @@ export async function createStore(formData: FormData) {
   await supabase.from("stores").insert({
     name: text(formData, "name"),
     code: text(formData, "code") || null,
+    latitude: numberOrNull(formData, "latitude"),
+    longitude: numberOrNull(formData, "longitude"),
+    geofence_radius_m: numberOrNull(formData, "geofence_radius_m") ?? 150,
   });
   revalidatePath("/admin/master");
 }
@@ -63,6 +73,9 @@ export async function updateStore(formData: FormData) {
       name: text(formData, "name"),
       code: text(formData, "code") || null,
       is_active: checked(formData, "is_active"),
+      latitude: numberOrNull(formData, "latitude"),
+      longitude: numberOrNull(formData, "longitude"),
+      geofence_radius_m: numberOrNull(formData, "geofence_radius_m") ?? 150,
     })
     .eq("id", text(formData, "id"));
   revalidatePath("/admin/master");
