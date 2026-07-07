@@ -203,6 +203,7 @@ export type VendorReceipt = {
   id: string;
   vendor_id: string;
   request_id: string | null;
+  store_id: string | null;
   request_date: string;
   receipt_url: string;
   file_name: string | null;
