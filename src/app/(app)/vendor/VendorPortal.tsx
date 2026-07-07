@@ -1,24 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { productDisplayName } from "@/lib/format";
+import { Fragment, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { VendorReceipt } from "@/lib/types";
-import type { VendorBatchGroup } from "./page";
+import type { VendorBarangGroup, VendorRequestGroup } from "./page";
 
-export function VendorPortal({
-  groups,
+function RequestUploadCard({
+  group,
+  onUploaded,
   receipts,
   requestDate,
   vendorId,
 }: {
-  groups: VendorBatchGroup[];
+  group: VendorRequestGroup;
+  onUploaded: (receipt: VendorReceipt) => void;
   receipts: VendorReceipt[];
   requestDate: string;
   vendorId: string;
 }) {
   const supabase = createClient();
-  const [receiptList, setReceiptList] = useState(receipts);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
@@ -32,7 +32,7 @@ export function VendorPortal({
     setUploading(true);
     setMessage("");
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-    const path = `${vendorId}/${requestDate}/${Date.now()}-${safeFileName}`;
+    const path = `${vendorId}/${group.requestId}/${Date.now()}-${safeFileName}`;
     const { error: uploadError } = await supabase.storage.from("vendor-receipts").upload(path, file, {
       contentType: file.type || undefined,
       upsert: true,
@@ -51,6 +51,7 @@ export function VendorPortal({
         file_name: file.name,
         receipt_url: publicUrl.publicUrl,
         request_date: requestDate,
+        request_id: group.requestId,
         vendor_id: vendorId,
       })
       .select("*")
@@ -62,72 +63,120 @@ export function VendorPortal({
       return;
     }
 
-    if (receipt) setReceiptList((current) => [receipt, ...current]);
+    if (receipt) onUploaded(receipt);
     setFile(null);
     setMessage("Struk berhasil disimpan.");
   }
 
   return (
+    <div className="panel vendor-request-upload-card">
+      <div>
+        <p className="eyebrow">Batch {group.batchNo}</p>
+        <h3>{group.requestNo}</h3>
+        <p className="muted">Store: {group.storeName}</p>
+      </div>
+      {message ? <div className="alert">{message}</div> : null}
+      <div className="row-actions">
+        <input accept="image/*,.pdf" disabled={uploading} onChange={(event) => setFile(event.target.files?.[0] ?? null)} type="file" />
+        <button className="button primary" disabled={uploading || !file} onClick={saveReceipt} type="button">
+          {uploading ? "Menyimpan..." : "Simpan"}
+        </button>
+      </div>
+      <div className="receipt-list" style={{ marginTop: 10 }}>
+        {receipts.map((receipt) => (
+          <a href={receipt.receipt_url} key={receipt.id} target="_blank">
+            {receipt.file_name ?? "Struk"}{" "}
+            <span>{new Date(receipt.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
+          </a>
+        ))}
+        {receipts.length === 0 ? <span className="muted">Belum ada struk.</span> : null}
+      </div>
+    </div>
+  );
+}
+
+export function VendorPortal({
+  barangGroups,
+  receipts,
+  requestDate,
+  requestGroups,
+  vendorId,
+}: {
+  barangGroups: VendorBarangGroup[];
+  receipts: VendorReceipt[];
+  requestDate: string;
+  requestGroups: VendorRequestGroup[];
+  vendorId: string;
+}) {
+  const [receiptList, setReceiptList] = useState(receipts);
+
+  function handleUploaded(receipt: VendorReceipt) {
+    setReceiptList((current) => [receipt, ...current]);
+  }
+
+  return (
     <>
-      {groups.map((group) => (
-        <section className="panel" key={group.requestId} style={{ marginBottom: 16 }}>
-          <div className="page-head compact">
-            <div>
-              <p className="eyebrow">Batch {group.batchNo}</p>
-              <h2>{group.requestNo}</h2>
-              <p className="muted">Store: {group.storeName}</p>
-            </div>
+      <section className="panel" style={{ marginBottom: 16 }}>
+        <div className="page-head compact">
+          <div>
+            <p className="eyebrow">Barang</p>
+            <h2>List Barang</h2>
           </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Barang</th>
+                <th>Batch</th>
+                <th>Store</th>
+                <th>Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {barangGroups.map((group) => (
+                <Fragment key={group.productId}>
+                  {group.rows.map((row, index) => (
+                    <tr key={`${group.productId}-${row.requestNo}-${index}`}>
+                      {index === 0 ? <td rowSpan={group.rows.length}>{group.displayName}</td> : null}
+                      <td>Batch {row.batchNo}</td>
+                      <td>{row.storeName}</td>
+                      <td>
+                        {row.qty} {row.unit}
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))}
+              {barangGroups.length === 0 ? (
                 <tr>
-                  <th>Barang</th>
-                  <th>Qty</th>
+                  <td colSpan={4}>Belum ada request untuk filter yang dipilih.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {group.items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{productDisplayName(item.products)}</td>
-                    <td>
-                      {item.qty} {item.unit}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
-      {groups.length === 0 ? (
-        <section className="panel" style={{ marginBottom: 16 }}>
-          <p className="muted">Belum ada request untuk filter yang dipilih.</p>
-        </section>
-      ) : null}
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="panel">
         <div className="page-head compact">
           <div>
             <p className="eyebrow">Struk</p>
-            <h2>Upload Struk</h2>
+            <h2>Upload Struk per Request</h2>
           </div>
         </div>
-        {message ? <div className="alert">{message}</div> : null}
-        <div className="row-actions">
-          <input accept="image/*,.pdf" disabled={uploading} onChange={(event) => setFile(event.target.files?.[0] ?? null)} type="file" />
-          <button className="button primary" disabled={uploading || !file} onClick={saveReceipt} type="button">
-            {uploading ? "Menyimpan..." : "Simpan"}
-          </button>
-        </div>
-        <div className="receipt-list" style={{ marginTop: 12 }}>
-          {receiptList.map((receipt) => (
-            <a href={receipt.receipt_url} key={receipt.id} target="_blank">
-              {receipt.file_name ?? "Struk"}{" "}
-              <span>{new Date(receipt.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
-            </a>
+        <div className="vendor-request-upload-grid">
+          {requestGroups.map((group) => (
+            <RequestUploadCard
+              group={group}
+              key={group.requestId}
+              onUploaded={handleUploaded}
+              receipts={receiptList.filter((receipt) => receipt.request_id === group.requestId)}
+              requestDate={requestDate}
+              vendorId={vendorId}
+            />
           ))}
-          {receiptList.length === 0 ? <span className="muted">Belum ada struk untuk tanggal ini.</span> : null}
+          {requestGroups.length === 0 ? <p className="muted">Belum ada request untuk filter yang dipilih.</p> : null}
         </div>
       </section>
     </>

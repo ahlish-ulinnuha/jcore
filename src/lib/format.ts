@@ -12,6 +12,7 @@ export function titleCase(value: string) {
 export function productDisplayName(product?: Product | null) {
   if (!product) return "-";
   const productName = titleCase(product.name);
-  const brandName = product.brands?.name ? ` - ${product.brands.name.toUpperCase()}` : "";
+  const brand = product.brands?.name?.trim();
+  const brandName = brand && brand.toUpperCase() !== "NOBRAND" ? ` - ${brand.toUpperCase()}` : "";
   return `${productName}${brandName}`;
 }

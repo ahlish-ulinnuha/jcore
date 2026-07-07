@@ -1822,6 +1822,22 @@ th {
   margin: 0;
 }
 
+.vendor-request-upload-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.vendor-request-upload-card {
+  display: grid;
+  gap: 10px;
+}
+
+.vendor-request-upload-card h3 {
+  font-size: 18px;
+  margin: 0;
+}
+
 .upload-button {
   cursor: pointer;
   position: relative;

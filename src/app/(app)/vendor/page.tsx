@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { productDisplayName } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, PurchaseRequestItem, Vendor, VendorReceipt } from "@/lib/types";
 import { VendorPortal } from "./VendorPortal";
@@ -15,12 +16,25 @@ type VendorRequestItem = PurchaseRequestItem & {
   } | null;
 };
 
-export type VendorBatchGroup = {
+export type VendorBarangRow = {
   batchNo: number;
-  requestId: string;
   requestNo: string;
   storeName: string;
-  items: VendorRequestItem[];
+  qty: number;
+  unit: string;
+};
+
+export type VendorBarangGroup = {
+  productId: string;
+  displayName: string;
+  rows: VendorBarangRow[];
+};
+
+export type VendorRequestGroup = {
+  requestId: string;
+  requestNo: string;
+  batchNo: number;
+  storeName: string;
 };
 
 function todayJakarta() {
@@ -32,20 +46,40 @@ function todayJakarta() {
   }).format(new Date());
 }
 
-function groupByBatch(items: VendorRequestItem[]): VendorBatchGroup[] {
-  const groups = new Map<string, VendorBatchGroup>();
+function groupByBarang(items: VendorRequestItem[]): VendorBarangGroup[] {
+  const groups = new Map<string, VendorBarangGroup>();
+  for (const item of items) {
+    const key = item.product_id;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        displayName: productDisplayName(item.products),
+        productId: key,
+        rows: [],
+      });
+    }
+    groups.get(key)!.rows.push({
+      batchNo: item.purchase_requests?.batch_no ?? 0,
+      qty: item.qty,
+      requestNo: item.purchase_requests?.request_no ?? "-",
+      storeName: item.purchase_requests?.store_name ?? "-",
+      unit: item.unit,
+    });
+  }
+  return Array.from(groups.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+function groupByRequest(items: VendorRequestItem[]): VendorRequestGroup[] {
+  const groups = new Map<string, VendorRequestGroup>();
   for (const item of items) {
     const key = item.request_id;
     if (!groups.has(key)) {
       groups.set(key, {
         batchNo: item.purchase_requests?.batch_no ?? 0,
-        items: [],
-        requestId: item.request_id,
+        requestId: key,
         requestNo: item.purchase_requests?.request_no ?? "-",
         storeName: item.purchase_requests?.store_name ?? "-",
       });
     }
-    groups.get(key)!.items.push(item);
   }
   return Array.from(groups.values()).sort((a, b) => b.batchNo - a.batchNo);
 }
@@ -88,7 +122,8 @@ export default async function VendorPage({ searchParams }: { searchParams: Searc
   const allRows = items ?? [];
   const batchOptions = Array.from(new Set(allRows.map((item) => item.purchase_requests?.batch_no ?? 0))).sort((a, b) => b - a);
   const filteredRows = selectedBatch === "all" ? allRows : allRows.filter((item) => String(item.purchase_requests?.batch_no ?? "") === selectedBatch);
-  const groups = groupByBatch(filteredRows);
+  const barangGroups = groupByBarang(filteredRows);
+  const requestGroups = groupByRequest(filteredRows);
 
   const { data: receipts } = await supabase
     .from("vendor_receipts")
@@ -130,7 +165,13 @@ export default async function VendorPage({ searchParams }: { searchParams: Searc
         </form>
       </section>
 
-      <VendorPortal groups={groups} receipts={receipts ?? []} requestDate={requestDate} vendorId={vendorUser.vendor_id} />
+      <VendorPortal
+        barangGroups={barangGroups}
+        receipts={receipts ?? []}
+        requestDate={requestDate}
+        requestGroups={requestGroups}
+        vendorId={vendorUser.vendor_id}
+      />
     </>
   );
 }
