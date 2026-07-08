@@ -18,16 +18,9 @@ type VendorRequestItem = PurchaseRequestItem & {
 
 export type VendorBatchGroup = {
   batchNo: number;
-  requestId: string;
-  requestNo: string;
-  storeName: string;
   items: VendorRequestItem[];
-};
-
-export type VendorStoreGroup = {
-  storeId: string;
-  storeName: string;
-  batchNumbers: number[];
+  requestNos: string[];
+  storeNames: string[];
 };
 
 function todayJakarta() {
@@ -40,41 +33,25 @@ function todayJakarta() {
 }
 
 function groupByBatch(items: VendorRequestItem[]): VendorBatchGroup[] {
-  const groups = new Map<string, VendorBatchGroup>();
+  const groups = new Map<number, VendorBatchGroup>();
   for (const item of items) {
-    const key = item.request_id;
-    if (!groups.has(key)) {
-      groups.set(key, {
-        batchNo: item.purchase_requests?.batch_no ?? 0,
+    const batchNo = item.purchase_requests?.batch_no ?? 0;
+    if (!groups.has(batchNo)) {
+      groups.set(batchNo, {
+        batchNo,
         items: [],
-        requestId: item.request_id,
-        requestNo: item.purchase_requests?.request_no ?? "-",
-        storeName: item.purchase_requests?.store_name ?? "-",
+        requestNos: [],
+        storeNames: [],
       });
     }
-    groups.get(key)!.items.push(item);
+    const group = groups.get(batchNo)!;
+    group.items.push(item);
+    const requestNo = item.purchase_requests?.request_no ?? "-";
+    if (!group.requestNos.includes(requestNo)) group.requestNos.push(requestNo);
+    const storeName = item.purchase_requests?.store_name ?? "-";
+    if (!group.storeNames.includes(storeName)) group.storeNames.push(storeName);
   }
   return Array.from(groups.values()).sort((a, b) => b.batchNo - a.batchNo);
-}
-
-function groupByStore(items: VendorRequestItem[]): VendorStoreGroup[] {
-  const groups = new Map<string, VendorStoreGroup>();
-  for (const item of items) {
-    const key = item.purchase_requests?.store_id ?? "unknown";
-    if (!groups.has(key)) {
-      groups.set(key, {
-        batchNumbers: [],
-        storeId: key,
-        storeName: item.purchase_requests?.store_name ?? "-",
-      });
-    }
-    const batchNo = item.purchase_requests?.batch_no ?? 0;
-    const group = groups.get(key)!;
-    if (!group.batchNumbers.includes(batchNo)) group.batchNumbers.push(batchNo);
-  }
-  return Array.from(groups.values())
-    .map((group) => ({ ...group, batchNumbers: group.batchNumbers.sort((a, b) => a - b) }))
-    .sort((a, b) => a.storeName.localeCompare(b.storeName));
 }
 
 export default async function VendorPage({ searchParams }: { searchParams: SearchParams }) {
@@ -116,7 +93,6 @@ export default async function VendorPage({ searchParams }: { searchParams: Searc
   const batchOptions = Array.from(new Set(allRows.map((item) => item.purchase_requests?.batch_no ?? 0))).sort((a, b) => b - a);
   const filteredRows = selectedBatch === "all" ? allRows : allRows.filter((item) => String(item.purchase_requests?.batch_no ?? "") === selectedBatch);
   const batchGroups = groupByBatch(filteredRows);
-  const storeGroups = groupByStore(filteredRows);
 
   const { data: receipts } = await supabase
     .from("vendor_receipts")
@@ -158,7 +134,7 @@ export default async function VendorPage({ searchParams }: { searchParams: Searc
         </form>
       </section>
 
-      <VendorPortal batchGroups={batchGroups} receipts={receipts ?? []} requestDate={requestDate} storeGroups={storeGroups} vendorId={vendorUser.vendor_id} />
+      <VendorPortal batchGroups={batchGroups} receipts={receipts ?? []} requestDate={requestDate} vendorId={vendorUser.vendor_id} />
     </>
   );
 }

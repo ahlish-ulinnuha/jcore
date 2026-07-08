@@ -4,16 +4,16 @@ import { useState } from "react";
 import { productDisplayName } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import type { VendorReceipt } from "@/lib/types";
-import type { VendorBatchGroup, VendorStoreGroup } from "./page";
+import type { VendorBatchGroup } from "./page";
 
-function StoreUploadCard({
+function BatchUploadCard({
   group,
   onUploaded,
   receipts,
   requestDate,
   vendorId,
 }: {
-  group: VendorStoreGroup;
+  group: VendorBatchGroup;
   onUploaded: (receipt: VendorReceipt) => void;
   receipts: VendorReceipt[];
   requestDate: string;
@@ -33,7 +33,7 @@ function StoreUploadCard({
     setUploading(true);
     setMessage("");
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-    const path = `${vendorId}/${group.storeId}/${Date.now()}-${safeFileName}`;
+    const path = `${vendorId}/batch-${group.batchNo}/${Date.now()}-${safeFileName}`;
     const { error: uploadError } = await supabase.storage.from("vendor-receipts").upload(path, file, {
       contentType: file.type || undefined,
       upsert: true,
@@ -49,10 +49,10 @@ function StoreUploadCard({
     const { data: receipt, error: insertError } = await supabase
       .from("vendor_receipts")
       .insert({
+        batch_no: group.batchNo,
         file_name: file.name,
         receipt_url: publicUrl.publicUrl,
         request_date: requestDate,
-        store_id: group.storeId,
         vendor_id: vendorId,
       })
       .select("*")
@@ -72,9 +72,9 @@ function StoreUploadCard({
   return (
     <div className="panel vendor-request-upload-card">
       <div>
-        <p className="eyebrow">Store</p>
-        <h3>{group.storeName}</h3>
-        <p className="muted">Batch {group.batchNumbers.join(", ")}</p>
+        <p className="eyebrow">Batch</p>
+        <h3>Batch {group.batchNo}</h3>
+        <p className="muted">Store: {group.storeNames.join(", ")}</p>
       </div>
       {message ? <div className="alert">{message}</div> : null}
       <div className="row-actions">
@@ -100,13 +100,11 @@ export function VendorPortal({
   batchGroups,
   receipts,
   requestDate,
-  storeGroups,
   vendorId,
 }: {
   batchGroups: VendorBatchGroup[];
   receipts: VendorReceipt[];
   requestDate: string;
-  storeGroups: VendorStoreGroup[];
   vendorId: string;
 }) {
   const [receiptList, setReceiptList] = useState(receipts);
@@ -118,12 +116,12 @@ export function VendorPortal({
   return (
     <>
       {batchGroups.map((group) => (
-        <section className="panel" key={group.requestId} style={{ marginBottom: 16 }}>
+        <section className="panel" key={group.batchNo} style={{ marginBottom: 16 }}>
           <div className="page-head compact">
             <div>
               <p className="eyebrow">Batch {group.batchNo}</p>
-              <h2>{group.requestNo}</h2>
-              <p className="muted">Store: {group.storeName}</p>
+              <h2>Request {group.requestNos.join(", ")}</h2>
+              <p className="muted">Store: {group.storeNames.join(", ")}</p>
             </div>
           </div>
           <div className="table-wrap">
@@ -158,21 +156,21 @@ export function VendorPortal({
         <div className="page-head compact">
           <div>
             <p className="eyebrow">Struk</p>
-            <h2>Upload Struk per Toko</h2>
+            <h2>Upload Struk per Batch</h2>
           </div>
         </div>
         <div className="vendor-request-upload-grid">
-          {storeGroups.map((group) => (
-            <StoreUploadCard
+          {batchGroups.map((group) => (
+            <BatchUploadCard
               group={group}
-              key={group.storeId}
+              key={group.batchNo}
               onUploaded={handleUploaded}
-              receipts={receiptList.filter((receipt) => receipt.store_id === group.storeId)}
+              receipts={receiptList.filter((receipt) => receipt.batch_no === group.batchNo)}
               requestDate={requestDate}
               vendorId={vendorId}
             />
           ))}
-          {storeGroups.length === 0 ? <p className="muted">Belum ada request untuk filter yang dipilih.</p> : null}
+          {batchGroups.length === 0 ? <p className="muted">Belum ada request untuk filter yang dipilih.</p> : null}
         </div>
       </section>
     </>
