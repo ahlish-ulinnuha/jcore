@@ -6,6 +6,7 @@ type SummaryRow = {
   productName: string;
   qty: number;
   storeNames?: string[];
+  unit?: string;
   vendorName: string;
 };
 
@@ -60,7 +61,8 @@ export function CopySummaryButton({
           .map((row) => {
             const storeNames = shouldShowStoreNames(row.vendorName) ? [...(row.storeNames ?? [])].sort().join(" ") : "";
             const productName = storeNames ? `${row.productName} ${storeNames}` : row.productName;
-            return `- ${productName} / ${row.qty}`;
+            const unit = row.unit?.trim();
+            return `- ${productName} / ${row.qty}${unit ? ` ${unit}` : ""}`;
           });
         return [`Request ${vendorName}`, ...lines].join("\n");
       });

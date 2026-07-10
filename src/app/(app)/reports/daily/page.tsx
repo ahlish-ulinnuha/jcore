@@ -301,6 +301,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
               productName: row.summaryProductName,
               qty: row.qty,
               storeNames: row.storeNames,
+              unit: row.unit,
               vendorName: row.vendorName,
             }))}
             spiceRows={(spiceReports ?? []).map((report) => ({
