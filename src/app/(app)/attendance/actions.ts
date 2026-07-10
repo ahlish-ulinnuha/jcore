@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { sendTelegramMessage } from "@/lib/telegram";
 import type { Profile, Store } from "@/lib/types";
 
+export type AttendanceActionResult = { ok: true } | { ok: false; error: string };
+
 function numberOrNull(formData: FormData, key: string) {
   const value = Number(formData.get(key));
   return Number.isFinite(value) ? value : null;
@@ -36,32 +38,36 @@ async function requireStaffContext() {
 
   const { data: profile } = await supabase.from("profiles").select("*, stores(*)").eq("id", user.id).single<Profile>();
   if (!profile || profile.role !== "staff") redirect("/dashboard");
-  if (!profile.store_id) redirect("/attendance?error=missing-store");
+  if (!profile.store_id) return { error: "missing-store" as const };
 
   const { data: store } = await supabase.from("stores").select("*").eq("id", profile.store_id).single<Store>();
-  if (!store) redirect("/attendance?error=missing-store");
+  if (!store) return { error: "missing-store" as const };
 
   return { profile, store, supabase, user };
 }
 
-function checkDistance(store: Store, latitude: number, longitude: number) {
-  if (store.latitude == null || store.longitude == null) return null;
+function distanceOrOutOfRange(store: Store, latitude: number, longitude: number): { distance: number | null } | { error: string } {
+  if (store.latitude == null || store.longitude == null) return { distance: null };
   const distance = distanceInMeters(latitude, longitude, store.latitude, store.longitude);
   if (distance > store.geofence_radius_m) {
-    redirect(`/attendance?error=out-of-range&distance=${Math.round(distance)}&radius=${store.geofence_radius_m}`);
+    return { error: `out-of-range&distance=${Math.round(distance)}&radius=${store.geofence_radius_m}` };
   }
-  return distance;
+  return { distance };
 }
 
-export async function checkInAttendance(formData: FormData) {
-  const { profile, store, supabase, user } = await requireStaffContext();
+export async function checkInAttendance(formData: FormData): Promise<AttendanceActionResult> {
+  const context = await requireStaffContext();
+  if ("error" in context) return { error: context.error, ok: false };
+  const { profile, store, supabase, user } = context;
 
   const latitude = numberOrNull(formData, "latitude");
   const longitude = numberOrNull(formData, "longitude");
   const accuracy = numberOrNull(formData, "accuracy");
-  if (latitude === null || longitude === null) redirect("/attendance?error=missing-location");
+  if (latitude === null || longitude === null) return { error: "missing-location", ok: false };
 
-  const distance = checkDistance(store, latitude, longitude);
+  const distanceResult = distanceOrOutOfRange(store, latitude, longitude);
+  if ("error" in distanceResult) return { error: distanceResult.error, ok: false };
+  const { distance } = distanceResult;
 
   const { data: openSession } = await supabase
     .from("staff_attendance")
@@ -69,7 +75,7 @@ export async function checkInAttendance(formData: FormData) {
     .eq("staff_id", user.id)
     .is("check_out_at", null)
     .maybeSingle();
-  if (openSession) redirect("/attendance?error=already-checked-in");
+  if (openSession) return { error: "already-checked-in", ok: false };
 
   const { error } = await supabase.from("staff_attendance").insert({
     check_in_accuracy: accuracy,
@@ -80,7 +86,7 @@ export async function checkInAttendance(formData: FormData) {
     staff_id: user.id,
     store_id: store.id,
   });
-  if (error) redirect("/attendance?error=save-failed");
+  if (error) return { error: "save-failed", ok: false };
 
   await sendTelegramMessage(
     [
@@ -92,18 +98,22 @@ export async function checkInAttendance(formData: FormData) {
     ].join("\n"),
   );
 
-  redirect("/attendance?saved=checkin");
+  return { ok: true };
 }
 
-export async function checkOutAttendance(formData: FormData) {
-  const { profile, store, supabase, user } = await requireStaffContext();
+export async function checkOutAttendance(formData: FormData): Promise<AttendanceActionResult> {
+  const context = await requireStaffContext();
+  if ("error" in context) return { error: context.error, ok: false };
+  const { profile, store, supabase, user } = context;
 
   const latitude = numberOrNull(formData, "latitude");
   const longitude = numberOrNull(formData, "longitude");
   const accuracy = numberOrNull(formData, "accuracy");
-  if (latitude === null || longitude === null) redirect("/attendance?error=missing-location");
+  if (latitude === null || longitude === null) return { error: "missing-location", ok: false };
 
-  const distance = checkDistance(store, latitude, longitude);
+  const distanceResult = distanceOrOutOfRange(store, latitude, longitude);
+  if ("error" in distanceResult) return { error: distanceResult.error, ok: false };
+  const { distance } = distanceResult;
   const notes = text(formData, "notes");
 
   const { data: openSession } = await supabase
@@ -114,7 +124,7 @@ export async function checkOutAttendance(formData: FormData) {
     .order("check_in_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!openSession) redirect("/attendance?error=not-checked-in");
+  if (!openSession) return { error: "not-checked-in", ok: false };
 
   const { error } = await supabase
     .from("staff_attendance")
@@ -127,7 +137,7 @@ export async function checkOutAttendance(formData: FormData) {
       notes: notes || null,
     })
     .eq("id", openSession.id);
-  if (error) redirect("/attendance?error=save-failed");
+  if (error) return { error: "save-failed", ok: false };
 
   await sendTelegramMessage(
     [
@@ -142,5 +152,5 @@ export async function checkOutAttendance(formData: FormData) {
       .join("\n"),
   );
 
-  redirect("/attendance?saved=checkout");
+  return { ok: true };
 }

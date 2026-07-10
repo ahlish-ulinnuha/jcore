@@ -2859,7 +2859,38 @@ th {
   margin: 0;
 }
 
+.attendance-success {
+  color: var(--ok);
+  font-size: 13px;
+  margin: 0;
+}
+
+.button-spinner {
+  animation: route-spin 760ms linear infinite;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  border-top-color: #fff;
+  display: inline-block;
+  height: 13px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  width: 13px;
+}
+
 .dashboard-attendance-card {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.dashboard-attendance-staff {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.dashboard-attendance-staff-row {
   align-items: center;
   display: flex;
   gap: 12px;
