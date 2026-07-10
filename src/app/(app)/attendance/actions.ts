@@ -38,10 +38,10 @@ async function requireStaffContext() {
 
   const { data: profile } = await supabase.from("profiles").select("*, stores(*)").eq("id", user.id).single<Profile>();
   if (!profile || profile.role !== "staff") redirect("/dashboard");
-  if (!profile.store_id) return { error: "missing-store" as const };
+  if (!profile.store_id) redirect("/attendance?error=missing-store");
 
   const { data: store } = await supabase.from("stores").select("*").eq("id", profile.store_id).single<Store>();
-  if (!store) return { error: "missing-store" as const };
+  if (!store) redirect("/attendance?error=missing-store");
 
   return { profile, store, supabase, user };
 }
@@ -56,9 +56,7 @@ function distanceOrOutOfRange(store: Store, latitude: number, longitude: number)
 }
 
 export async function checkInAttendance(formData: FormData): Promise<AttendanceActionResult> {
-  const context = await requireStaffContext();
-  if ("error" in context) return { error: context.error, ok: false };
-  const { profile, store, supabase, user } = context;
+  const { profile, store, supabase, user } = await requireStaffContext();
 
   const latitude = numberOrNull(formData, "latitude");
   const longitude = numberOrNull(formData, "longitude");
@@ -102,9 +100,7 @@ export async function checkInAttendance(formData: FormData): Promise<AttendanceA
 }
 
 export async function checkOutAttendance(formData: FormData): Promise<AttendanceActionResult> {
-  const context = await requireStaffContext();
-  if ("error" in context) return { error: context.error, ok: false };
-  const { profile, store, supabase, user } = context;
+  const { profile, store, supabase, user } = await requireStaffContext();
 
   const latitude = numberOrNull(formData, "latitude");
   const longitude = numberOrNull(formData, "longitude");
