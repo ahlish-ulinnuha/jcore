@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, PurchaseRequest, ShiftType, StaffAttendance, StoreStaffSchedule } from "@/lib/types";
+import { AttendanceCheckForm } from "../attendance/AttendanceCheckForm";
 import { RequestStatusForm } from "./RequestStatusForm";
 
 function todayJakarta() {
@@ -194,15 +195,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
 
       <section className="panel dashboard-attendance-card" style={{ marginTop: 16 }}>
         {profile.role === "staff" ? (
-          <>
-            <div>
-              <p className="eyebrow">Absensi Hari Ini</p>
-              <strong>{openAttendance ? `Check-in ${formatTime(openAttendance.check_in_at)} - Sedang bekerja` : "Belum check-in"}</strong>
-            </div>
-            <Link className="button primary" href="/attendance">
-              {openAttendance ? "Check Out" : "Check In"}
+          <div className="dashboard-attendance-staff">
+            <Link className="button outline" href="/attendance">
+              Lihat My Full Attendance
             </Link>
-          </>
+            <div className="dashboard-attendance-staff-row">
+              <div>
+                <p className="eyebrow">Absensi Hari Ini</p>
+                <strong>{openAttendance ? `Check-in ${formatTime(openAttendance.check_in_at)} - Sedang bekerja` : "Belum check-in"}</strong>
+              </div>
+              <AttendanceCheckForm hasOpenSession={Boolean(openAttendance)} />
+            </div>
+          </div>
         ) : (
           <>
             <div>
