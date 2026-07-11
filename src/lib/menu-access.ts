@@ -9,6 +9,7 @@ export const mainMenuItems = [
   { href: "/shopping", key: "shopping", label: "Belanja", roles: ["admin", "staff"] },
   { href: "/attendance", key: "attendance", label: "Absensi", roles: ["admin", "staff"] },
   { href: "/schedules", key: "schedules", label: "Schedule", roles: ["admin", "staff"] },
+  { href: "/schedules/all", key: "all_schedules", label: "All Schedule", roles: ["admin"] },
   { href: "/schedules/requests", key: "schedule_requests", label: "Request Schedule", roles: ["admin"] },
   { href: "/overtime-summary", key: "overtime_summary", label: "Overtime Summary", roles: ["admin"] },
   { href: "/admin/vendor", key: "admin_vendor", label: "Vendor", roles: ["admin"] },
@@ -42,11 +43,14 @@ export function defaultMenuKeysForRole(role: Role) {
 }
 
 export function allowedMenuKeysForRole(role: Role, rows: MenuAccessRowLike[] = []) {
-  const defaultKeys = defaultMenuKeysForRole(role);
-  if (rows.length === 0) return defaultKeys;
-
-  const accessByKey = new Map(rows.map((row) => [row.menu_key, row.can_access]));
-  return defaultKeys.filter((key) => !accessByKey.has(key) || accessByKey.get(key) === true);
+  const allowedKeys = new Set<string>(defaultMenuKeysForRole(role));
+  const allMenuKeys = new Set<string>(allMenuItems.map((item) => item.key));
+  for (const row of rows) {
+    if (!allMenuKeys.has(row.menu_key)) continue;
+    if (row.can_access) allowedKeys.add(row.menu_key);
+    else allowedKeys.delete(row.menu_key);
+  }
+  return Array.from(allowedKeys);
 }
 
 export function hasMenuAccess(key: string, allowedKeys: string[]) {
@@ -79,6 +83,5 @@ export function canAccessPath(pathname: string, role: Role, allowedKeys: string[
   const key = menuKeyForPath(pathname);
   if (!key || typeof key !== "string") return true;
 
-  const item = allMenuItems.find((menuItem) => menuItem.key === key);
-  return Boolean(item && roleAllowed(item.roles, role) && allowedKeys.includes(key));
+  return allowedKeys.includes(key);
 }
