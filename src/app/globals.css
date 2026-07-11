@@ -3568,6 +3568,59 @@ th {
     white-space: nowrap;
   }
 
+  .overtime-table-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .overtime-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 11px;
+    min-width: 720px;
+  }
+
+  .overtime-table thead {
+    display: table-header-group;
+  }
+
+  .overtime-table tbody {
+    display: table-row-group;
+  }
+
+  .overtime-table tr {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    display: table-row;
+    padding: 0;
+    transform: none;
+    width: auto;
+  }
+
+  .overtime-table tr:hover {
+    box-shadow: none;
+    transform: none;
+  }
+
+  .overtime-table th,
+  .overtime-table td {
+    display: table-cell;
+    vertical-align: middle;
+    white-space: nowrap;
+    width: auto;
+  }
+
+  .overtime-table td::before {
+    content: none;
+  }
+
+  .overtime-table td:empty {
+    display: table-cell;
+  }
+
   .admin-vendor-head {
     align-items: stretch;
     flex-direction: column;
