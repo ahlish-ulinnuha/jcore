@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { distanceInMeters } from "@/lib/geo";
-import { sendNotification } from "@/lib/notify";
 import { createClient } from "@/lib/supabase/server";
+import { sendTelegramMessage } from "@/lib/telegram";
 import type { Profile, Store } from "@/lib/types";
 
 export type AttendanceActionResult = { ok: true } | { ok: false; error: string };
@@ -86,7 +86,7 @@ export async function checkInAttendance(formData: FormData): Promise<AttendanceA
   });
   if (error) return { error: "save-failed", ok: false };
 
-  await sendNotification(
+  await sendTelegramMessage(
     [
       "✅ Check-in Absensi",
       `Staff: ${profile.full_name}`,
@@ -135,7 +135,7 @@ export async function checkOutAttendance(formData: FormData): Promise<Attendance
     .eq("id", openSession.id);
   if (error) return { error: "save-failed", ok: false };
 
-  await sendNotification(
+  await sendTelegramMessage(
     [
       "🚪 Check-out Absensi",
       `Staff: ${profile.full_name}`,
