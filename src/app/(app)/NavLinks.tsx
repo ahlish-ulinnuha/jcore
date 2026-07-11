@@ -23,6 +23,7 @@ const adminReportMenu = [
 const operationalMenu = [
   { key: "attendance", label: "Absensi" },
   { key: "schedules", label: "Schedule", staffLabel: "My Schedule" },
+  { key: "all_schedules", label: "All Schedule" },
   { key: "schedule_requests", label: "Request Schedule" },
   { adminOnly: true, key: "overtime_summary", label: "Overtime Summary" },
 ];
