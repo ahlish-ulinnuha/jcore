@@ -54,14 +54,6 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
   if (!profile || profile.role === "vendor") redirect("/dashboard");
-  if (profile.role === "staff" && !profile.store_id) {
-    return (
-      <section className="panel">
-        <h1>Store belum di-set</h1>
-        <p className="muted">Akun Anda belum terhubung ke store. Hubungi admin untuk mengatur store.</p>
-      </section>
-    );
-  }
 
   const params = await searchParams;
   const selectedMonth = params.month ?? currentMonthJakarta();
@@ -69,22 +61,10 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
   const monthStart = monthDates[0];
   const monthEnd = monthDates[monthDates.length - 1];
 
-  const staffStoreId = profile.role === "staff" ? profile.store_id : null;
-
-  const storesQuery = supabase.from("stores").select("*").eq("is_active", true).order("name");
-  const staffQuery = supabase.from("profiles").select("*, stores(*)").eq("role", "staff").order("full_name");
-  const scheduleQuery = supabase.from("store_staff_schedules").select("*").gte("work_date", monthStart).lte("work_date", monthEnd);
-
-  if (staffStoreId) {
-    storesQuery.eq("id", staffStoreId);
-    staffQuery.eq("store_id", staffStoreId);
-    scheduleQuery.eq("store_id", staffStoreId);
-  }
-
   const [{ data: stores }, { data: staffRows }, { data: scheduleRows }] = await Promise.all([
-    storesQuery.returns<Store[]>(),
-    staffQuery.returns<StaffWithStore[]>(),
-    scheduleQuery.returns<StoreStaffSchedule[]>(),
+    supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>(),
+    supabase.from("profiles").select("*, stores(*)").eq("role", "staff").order("full_name").returns<StaffWithStore[]>(),
+    supabase.from("store_staff_schedules").select("*").gte("work_date", monthStart).lte("work_date", monthEnd).returns<StoreStaffSchedule[]>(),
   ]);
 
   const scheduleMap = new Map((scheduleRows ?? []).map((schedule) => [`${schedule.staff_id}:${schedule.work_date}`, schedule]));
@@ -113,9 +93,7 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
         <div>
           <p className="eyebrow">Operasional</p>
           <h1>All Schedule</h1>
-          <p className="muted">
-            {staffStoreId ? "Schedule seluruh staff di store Anda dalam satu halaman." : "Schedule seluruh staff dari semua outlet dalam satu halaman."}
-          </p>
+          <p className="muted">Schedule seluruh staff dari semua outlet dalam satu halaman.</p>
         </div>
       </div>
 
