@@ -1,8 +1,27 @@
+export type SendWhatsappResult = { ok: true } | { ok: false; error: string };
+
 function parseTargets(value: string) {
   return value
     .split(",")
     .map((target) => target.trim())
     .filter(Boolean);
+}
+
+async function postToFonnte(token: string, target: string, text: string): Promise<SendWhatsappResult> {
+  try {
+    const response = await fetch("https://api.fonnte.com/send", {
+      body: new URLSearchParams({ message: text, target }),
+      headers: { Authorization: token },
+      method: "POST",
+    });
+    const body = await response.text();
+    if (!response.ok) {
+      return { error: `HTTP ${response.status}: ${body}`, ok: false };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Gagal mengirim pesan WhatsApp.", ok: false };
+  }
 }
 
 export async function sendWhatsappMessage(text: string) {
@@ -19,16 +38,15 @@ export async function sendWhatsappMessage(text: string) {
     return;
   }
 
-  try {
-    const response = await fetch("https://api.fonnte.com/send", {
-      body: new URLSearchParams({ message: text, target: targets.join(",") }),
-      headers: { Authorization: token },
-      method: "POST",
-    });
-    if (!response.ok) {
-      console.error("[whatsapp] gagal mengirim pesan", { status: response.status, body: await response.text() });
-    }
-  } catch (error) {
-    console.error("[whatsapp] gagal mengirim pesan", error);
+  const result = await postToFonnte(token, targets.join(","), text);
+  if (!result.ok) {
+    console.error("[whatsapp] gagal mengirim pesan", result.error);
   }
+}
+
+export async function sendWhatsappMessageTo(target: string, text: string): Promise<SendWhatsappResult> {
+  const token = process.env.FONNTE_TOKEN;
+  if (!token) return { error: "FONNTE_TOKEN belum diisi di environment.", ok: false };
+  if (!target) return { error: "Nomor WhatsApp tujuan belum diisi.", ok: false };
+  return postToFonnte(token, target, text);
 }

@@ -214,6 +214,20 @@ export type VendorReceipt = {
   vendors?: Vendor | null;
 };
 
+export type VendorMessageLog = {
+  id: string;
+  vendor_id: string;
+  request_date: string;
+  batch_no: number;
+  channel: string;
+  message: string;
+  status: "success" | "failed";
+  error_message: string | null;
+  sent_by: string | null;
+  created_at: string;
+  vendors?: Vendor | null;
+};
+
 export type DailySpiceReport = {
   id: string;
   report_date: string;
