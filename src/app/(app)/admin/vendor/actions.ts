@@ -29,6 +29,26 @@ function optionalNumber(formData: FormData, key: string) {
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+function checked(formData: FormData, key: string) {
+  return formData.getAll(key).some((value) => ["1", "on", "true"].includes(String(value)));
+}
+
+export async function updateVendorAutoSend(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const vendorId = text(formData, "vendor_id");
+  if (!vendorId) return;
+
+  await supabase
+    .from("vendors")
+    .update({
+      auto_send_purchase: checked(formData, "auto_send_purchase"),
+      phone: text(formData, "phone") || null,
+    })
+    .eq("id", vendorId);
+
+  revalidatePath("/admin/vendor");
+}
+
 export async function saveAdminVendorItem(formData: FormData) {
   const { supabase, user } = await requireAdmin();
   const itemId = text(formData, "item_id");

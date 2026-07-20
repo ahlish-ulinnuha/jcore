@@ -90,9 +90,11 @@ export default async function AdminVendorPage({ searchParams }: { searchParams: 
     : { data: [] as ProductVendorPrice[] };
 
   const groups = Object.values(
-    rows.reduce<Record<string, { items: AdminVendorItem[]; receipts: VendorReceipt[]; vendorId: string; vendorName: string }>>((acc, item) => {
+    rows.reduce<Record<string, { autoSendPurchase: boolean; items: AdminVendorItem[]; phone: string | null; receipts: VendorReceipt[]; vendorId: string; vendorName: string }>>((acc, item) => {
       acc[item.vendor_id] ??= {
+        autoSendPurchase: item.vendors?.auto_send_purchase ?? false,
         items: [],
+        phone: item.vendors?.phone ?? null,
         receipts: (receipts ?? []).filter((receipt) => receipt.vendor_id === item.vendor_id),
         vendorId: item.vendor_id,
         vendorName: item.vendors?.name ?? "Unknown Vendor",
