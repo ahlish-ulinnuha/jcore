@@ -1,0 +1,26 @@
+name: Send Vendor Purchases (WhatsApp)
+
+on:
+  schedule:
+    # 02:00 UTC = 09:00 WIB
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cron endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/cron/send-vendor-purchases" \
+            -H "Authorization: Bearer $CRON_SECRET")
+          status_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "Response body: $body"
+          if [ "$status_code" -ge 300 ]; then
+            echo "Request failed with status $status_code"
+            exit 1
+          fi
