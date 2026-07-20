@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { allowedMenuKeysForRole, hasMenuAccess } from "@/lib/menu-access";
 import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
-import type { DailySpiceReport, Profile, PurchaseRequest, PurchaseRequestItem, Store, VendorMessageLog } from "@/lib/types";
+import type { DailySpiceReport, Profile, ProfileMenuAccess, PurchaseRequest, PurchaseRequestItem, Store, VendorMessageLog } from "@/lib/types";
 import { CopySummaryButton } from "./CopySummaryButton";
 import { SendVendorMessageButton } from "./SendVendorMessageButton";
 
@@ -113,6 +114,14 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
   if (!profile || profile.role === "vendor") redirect("/dashboard");
+
+  const { data: menuAccessRows } = await supabase
+    .from("profile_menu_access")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .returns<ProfileMenuAccess[]>();
+  const allowedMenuKeys = allowedMenuKeysForRole(profile.role, menuAccessRows ?? []);
+  const canSendVendorMessage = hasMenuAccess("send_vendor_message", allowedMenuKeys);
 
   const params = await searchParams;
   const date = params.date ?? todayJakarta();
@@ -348,12 +357,14 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
               <section className="vendor-report-group" key={`${batchGroup.batchNo}-${vendor.vendorId}`}>
                 <div className="vendor-report-group-head">
                   <h3>{vendor.vendorName}</h3>
-                  <SendVendorMessageButton
-                    batchNo={Number(batchGroup.batchNo)}
-                    message={buildVendorMessage(vendor.vendorName, batchGroup.batchNo, requestDateLabel, vendor.rows)}
-                    requestDate={date}
-                    vendorId={vendor.vendorId}
-                  />
+                  {canSendVendorMessage ? (
+                    <SendVendorMessageButton
+                      batchNo={Number(batchGroup.batchNo)}
+                      message={buildVendorMessage(vendor.vendorName, batchGroup.batchNo, requestDateLabel, vendor.rows)}
+                      requestDate={date}
+                      vendorId={vendor.vendorId}
+                    />
+                  ) : null}
                 </div>
                 <div className="report-item-list">
                   {vendor.rows.map((row) => (

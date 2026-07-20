@@ -28,6 +28,10 @@ const operationalMenu = [
   { adminOnly: true, key: "overtime_summary", label: "Overtime Summary" },
 ];
 
+// Capability-only keys: not real pages, just permission toggles for features inside other pages.
+// Must be excluded from nav rendering since their href isn't a navigable route.
+const hiddenCapabilityKeys = ["send_vendor_message"];
+
 export function NavLinks({ allowedMenuKeys, role }: { allowedMenuKeys: string[]; role: Role }) {
   const pathname = usePathname();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -51,9 +55,10 @@ export function NavLinks({ allowedMenuKeys, role }: { allowedMenuKeys: string[];
         })
         .filter((link): link is NonNullable<typeof link> => Boolean(link))
       : [];
-  const visibleTopLinks = role === "admin"
+  const visibleTopLinks = (role === "admin"
     ? visibleMainLinks.filter((link) => ![...adminReportMenu, ...operationalMenu].some((item) => item.key === link.key))
-    : visibleMainLinks.filter((link) => !operationalMenu.some((item) => item.key === link.key));
+    : visibleMainLinks.filter((link) => !operationalMenu.some((item) => item.key === link.key))
+  ).filter((link) => !hiddenCapabilityKeys.includes(link.key));
 
   useEffect(() => {
     setOpenMenu(null);

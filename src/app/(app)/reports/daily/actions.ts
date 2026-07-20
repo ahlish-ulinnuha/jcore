@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { allowedMenuKeysForRole, hasMenuAccess } from "@/lib/menu-access";
 import { createClient } from "@/lib/supabase/server";
 import { sendWhatsappMessageTo } from "@/lib/whatsapp";
-import type { Profile, Vendor } from "@/lib/types";
+import type { Profile, ProfileMenuAccess, Vendor } from "@/lib/types";
 
 export type SendVendorMessageResult = { ok: true } | { ok: false; error: string };
 
@@ -26,6 +27,16 @@ export async function sendVendorRequestMessage(formData: FormData): Promise<Send
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
   if (!profile || profile.role === "vendor") return { error: "Tidak diizinkan.", ok: false };
+
+  const { data: menuAccessRows } = await supabase
+    .from("profile_menu_access")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .returns<ProfileMenuAccess[]>();
+  const allowedMenuKeys = allowedMenuKeysForRole(profile.role, menuAccessRows ?? []);
+  if (!hasMenuAccess("send_vendor_message", allowedMenuKeys)) {
+    return { error: "Anda belum memiliki akses untuk mengirim pesan ke vendor.", ok: false };
+  }
 
   const vendorId = text(formData, "vendor_id");
   const requestDate = text(formData, "request_date");
