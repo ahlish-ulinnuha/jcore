@@ -1044,6 +1044,15 @@ th {
   transform: translateY(-1px);
 }
 
+.vendor-report-group-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .vendor-report-group h3 {
   align-items: center;
   color: var(--primary);
@@ -1051,7 +1060,27 @@ th {
   font-size: 17px;
   font-weight: 900;
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 0;
+}
+
+.send-vendor-message {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.send-vendor-status {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.send-vendor-status.success {
+  color: var(--ok);
+}
+
+.send-vendor-status.failed {
+  color: var(--danger);
 }
 
 .vendor-report-group h3::before {

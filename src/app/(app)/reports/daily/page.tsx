@@ -2,8 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
-import type { DailySpiceReport, Profile, PurchaseRequest, PurchaseRequestItem, Store } from "@/lib/types";
+import type { DailySpiceReport, Profile, PurchaseRequest, PurchaseRequestItem, Store, VendorMessageLog } from "@/lib/types";
 import { CopySummaryButton } from "./CopySummaryButton";
+import { SendVendorMessageButton } from "./SendVendorMessageButton";
 
 type ItemWithRequest = PurchaseRequestItem & {
   purchase_requests?: {
@@ -87,6 +88,22 @@ function summaryProductName(item: ItemWithRequest) {
   return `${name}${brand}`;
 }
 
+function buildVendorMessage(vendorName: string, batchNo: string, dateLabel: string, rows: ReportRow[]) {
+  const lines = rows
+    .slice()
+    .sort((a, b) => a.productName.localeCompare(b.productName))
+    .map((row) => `- ${row.productName} / ${row.qty} ${row.unit}`.trim());
+  return [`*Request ${vendorName} - Batch ${batchNo}*`, `Tanggal: ${dateLabel}`, "------------------------------", ...lines].join("\n");
+}
+
+function messageStatusLabel(status: VendorMessageLog["status"]) {
+  return status === "success" ? "Terkirim" : "Gagal";
+}
+
+function formatMessageTime(value: string) {
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(value));
+}
+
 export default async function DailyReportPage({ searchParams }: { searchParams: SearchParams }) {
   const supabase = await createClient();
   const {
@@ -144,6 +161,14 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
   }
 
   const { data: spiceReports } = await spiceQuery.order("store_name").returns<DailySpiceReport[]>();
+
+  const { data: messageLogs } = await supabase
+    .from("vendor_message_logs")
+    .select("*, vendors(*)")
+    .eq("request_date", date)
+    .order("created_at", { ascending: false })
+    .limit(50)
+    .returns<VendorMessageLog[]>();
 
   const rows = items ?? [];
   const batchNumbers = Array.from(new Set(rows.map((item) => item.purchase_requests?.batch_no ?? 0).filter(Boolean))).sort((a, b) => b - a);
@@ -321,7 +346,15 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
           <div className="vendor-report-list">
             {batchGroup.vendors.map((vendor) => (
               <section className="vendor-report-group" key={`${batchGroup.batchNo}-${vendor.vendorId}`}>
-                <h3>{vendor.vendorName}</h3>
+                <div className="vendor-report-group-head">
+                  <h3>{vendor.vendorName}</h3>
+                  <SendVendorMessageButton
+                    batchNo={Number(batchGroup.batchNo)}
+                    message={buildVendorMessage(vendor.vendorName, batchGroup.batchNo, requestDateLabel, vendor.rows)}
+                    requestDate={date}
+                    vendorId={vendor.vendorId}
+                  />
+                </div>
                 <div className="report-item-list">
                   {vendor.rows.map((row) => (
                     <div className="report-item-row" key={`${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`}>
@@ -350,6 +383,46 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
           <p className="muted">Tidak ada item purchase request untuk filter yang dipilih.</p>
         </section>
       ) : null}
+
+      <section className="panel" style={{ marginTop: 16 }}>
+        <div className="page-head compact">
+          <div>
+            <p className="eyebrow">Riwayat</p>
+            <h2>Riwayat Pengiriman Pesan Vendor</h2>
+          </div>
+        </div>
+        <div className="table-wrap compact-mobile-wrap">
+          <table className="compact-mobile-table">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Vendor</th>
+                <th>Batch</th>
+                <th>Status</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(messageLogs ?? []).map((log) => (
+                <tr key={log.id}>
+                  <td>{formatMessageTime(log.created_at)}</td>
+                  <td>{log.vendors?.name ?? "-"}</td>
+                  <td>Batch {log.batch_no}</td>
+                  <td>
+                    <span className={`payment-status-badge ${log.status === "success" ? "paid" : "unpaid"}`}>{messageStatusLabel(log.status)}</span>
+                  </td>
+                  <td>{log.error_message ?? "-"}</td>
+                </tr>
+              ))}
+              {(messageLogs ?? []).length === 0 ? (
+                <tr>
+                  <td colSpan={5}>Belum ada pesan yang dikirim untuk tanggal ini.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </>
   );
 }
