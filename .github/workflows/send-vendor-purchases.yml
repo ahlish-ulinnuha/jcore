@@ -4,7 +4,13 @@ on:
   schedule:
     # 02:00 UTC = 09:00 WIB
     - cron: "0 2 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force resend even if already sent successfully today"
+        required: false
+        default: "false"
+        type: boolean
 
 jobs:
   send:
@@ -14,8 +20,9 @@ jobs:
         env:
           APP_URL: ${{ secrets.APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          FORCE: ${{ inputs.force || 'false' }}
         run: |
-          response=$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/cron/send-vendor-purchases" \
+          response=$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/cron/send-vendor-purchases?force=$FORCE" \
             -H "Authorization: Bearer $CRON_SECRET")
           status_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')

@@ -53,6 +53,7 @@ export async function GET(request: Request) {
   const supabase = createServiceClient();
   const date = todayJakarta();
   const dateLabel = displayDate(date);
+  const force = new URL(request.url).searchParams.get("force") === "true";
 
   const { data: items } = await supabase
     .from("purchase_request_items")
@@ -90,19 +91,21 @@ export async function GET(request: Request) {
   let skipped = 0;
 
   for (const group of groups.values()) {
-    const { data: alreadySent } = await supabase
-      .from("vendor_message_logs")
-      .select("id")
-      .eq("vendor_id", group.vendorId)
-      .eq("request_date", date)
-      .eq("batch_no", group.batchNo)
-      .eq("status", "success")
-      .limit(1)
-      .maybeSingle();
+    if (!force) {
+      const { data: alreadySent } = await supabase
+        .from("vendor_message_logs")
+        .select("id")
+        .eq("vendor_id", group.vendorId)
+        .eq("request_date", date)
+        .eq("batch_no", group.batchNo)
+        .eq("status", "success")
+        .limit(1)
+        .maybeSingle();
 
-    if (alreadySent) {
-      skipped += 1;
-      continue;
+      if (alreadySent) {
+        skipped += 1;
+        continue;
+      }
     }
 
     const message = buildMessage(group.vendorName, group.batchNo, dateLabel, group.lines);
