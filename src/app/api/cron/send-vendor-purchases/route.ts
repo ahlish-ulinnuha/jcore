@@ -40,10 +40,6 @@ function normalizePhone(phone: string) {
   return digits;
 }
 
-function isBumbuVendor(vendorName: string) {
-  return vendorName.trim().toLowerCase().includes("bumbu");
-}
-
 function sumSpiceStock(reports: DailySpiceReport[]) {
   return reports.reduce(
     (totals, report) => ({
@@ -54,23 +50,17 @@ function sumSpiceStock(reports: DailySpiceReport[]) {
   );
 }
 
-function buildMessage(
-  vendorName: string,
-  batchNo: number,
-  dateLabel: string,
-  lines: string[],
-  includeSpiceSummary: boolean,
-  spiceReports: DailySpiceReport[],
-) {
-  const parts = [`*Request ${vendorName} - Batch ${batchNo}*`, `Tanggal: ${dateLabel}`, "------------------------------", ...lines];
-  if (includeSpiceSummary) {
-    parts.push("------------------------------", "*Sisa Stock Bumbu*", `Tanggal: ${dateLabel}`, "");
-    if (spiceReports.length > 0) {
-      const totals = sumSpiceStock(spiceReports);
-      parts.push(`- Merah : ${totals.red}`, `- Putih : ${totals.white}`);
-    } else {
-      parts.push("Belum ada laporan stock bumbu hari ini.");
-    }
+function buildMessage(vendorName: string, batchNo: number, dateLabel: string, lines: string[]) {
+  return [`*Request ${vendorName} - Batch ${batchNo}*`, `Tanggal: ${dateLabel}`, "------------------------------", ...lines].join("\n");
+}
+
+function buildSpiceSummaryMessage(dateLabel: string, spiceReports: DailySpiceReport[]) {
+  const parts = ["*Sisa Stock Bumbu*", `Tanggal: ${dateLabel}`, ""];
+  if (spiceReports.length > 0) {
+    const totals = sumSpiceStock(spiceReports);
+    parts.push(`- Merah : ${totals.red}`, `- Putih : ${totals.white}`);
+  } else {
+    parts.push("Belum ada laporan stock bumbu hari ini.");
   }
   return parts.join("\n");
 }
@@ -86,6 +76,76 @@ export async function GET(request: Request) {
   const dateLabel = displayDate(date);
   const force = new URL(request.url).searchParams.get("force") === "true";
 
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+  const debug: Record<string, unknown>[] = [];
+
+  async function sendAndLog(vendorId: string, vendorName: string, batchNo: number, phone: string | null, message: string) {
+    const groupDebug: Record<string, unknown> = { batchNo, phone, vendorName };
+
+    if (!force) {
+      const { data: alreadySent, error: alreadySentError } = await supabase
+        .from("vendor_message_logs")
+        .select("id")
+        .eq("vendor_id", vendorId)
+        .eq("request_date", date)
+        .eq("batch_no", batchNo)
+        .eq("status", "success")
+        .limit(1)
+        .maybeSingle();
+
+      if (alreadySentError) groupDebug.alreadySentCheckError = alreadySentError.message;
+
+      if (alreadySent) {
+        skipped += 1;
+        groupDebug.result = "skipped_already_sent";
+        debug.push(groupDebug);
+        return;
+      }
+    }
+
+    if (!phone) {
+      failed += 1;
+      const { error: insertError } = await supabase.from("vendor_message_logs").insert({
+        batch_no: batchNo,
+        error_message: "Nomor WhatsApp vendor belum diisi.",
+        message,
+        phone: null,
+        request_date: date,
+        source: "cron",
+        status: "failed",
+        vendor_id: vendorId,
+      });
+      groupDebug.result = "failed_no_phone";
+      if (insertError) groupDebug.insertError = insertError.message;
+      debug.push(groupDebug);
+      return;
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+    const result = await sendWhatsappMessageTo(normalizedPhone, message);
+    if (result.ok) sent += 1;
+    else failed += 1;
+
+    const { error: insertError } = await supabase.from("vendor_message_logs").insert({
+      batch_no: batchNo,
+      error_message: result.ok ? null : result.error,
+      message,
+      phone: normalizedPhone,
+      request_date: date,
+      source: "cron",
+      status: result.ok ? "success" : "failed",
+      vendor_id: vendorId,
+    });
+
+    groupDebug.result = result.ok ? "sent" : "send_failed";
+    groupDebug.normalizedPhone = normalizedPhone;
+    if (!result.ok) groupDebug.sendError = result.error;
+    if (insertError) groupDebug.insertError = insertError.message;
+    debug.push(groupDebug);
+  }
+
   const { data: items, error: itemsError } = await supabase
     .from("purchase_request_items")
     .select("*, products(*, brands(*)), vendors!inner(*), purchase_requests!inner(batch_no, request_date, status)")
@@ -98,13 +158,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: itemsError.message, sent: 0, failed: 0, skipped: 0, stage: "query_items" }, { status: 500 });
   }
 
-  const rows = items ?? [];
-  if (rows.length === 0) {
-    return NextResponse.json({ sent: 0, failed: 0, skipped: 0, date, debug: "no submitted items today with auto_send_purchase vendors" });
-  }
-
   const groups = new Map<string, VendorBatchGroup>();
-  for (const item of rows) {
+  for (const item of items ?? []) {
     const batchNo = item.purchase_requests?.batch_no ?? 0;
     const key = `${item.vendor_id}:${batchNo}`;
     if (!groups.has(key)) {
@@ -121,100 +176,34 @@ export async function GET(request: Request) {
     groups.get(key)!.lines.push(`- ${item.products?.name ?? "-"}${brandSuffix} / ${item.qty} ${item.unit}`.trim());
   }
 
-  let sent = 0;
-  let failed = 0;
-  let skipped = 0;
-  const debug: Record<string, unknown>[] = [];
+  for (const group of groups.values()) {
+    const message = buildMessage(group.vendorName, group.batchNo, dateLabel, group.lines);
+    await sendAndLog(group.vendorId, group.vendorName, group.batchNo, group.phone, message);
+  }
 
-  const needsSpiceSummary = Array.from(groups.values()).some((group) => isBumbuVendor(group.vendorName));
-  let spiceReports: DailySpiceReport[] = [];
-  if (needsSpiceSummary) {
-    const { data, error: spiceError } = await supabase
+  // Standalone daily spice-stock summary for any vendor named "bumbu", independent of purchase requests.
+  const { data: bumbuVendors, error: bumbuVendorsError } = await supabase
+    .from("vendors")
+    .select("*")
+    .eq("auto_send_purchase", true)
+    .ilike("name", "%bumbu%")
+    .returns<Vendor[]>();
+
+  if (bumbuVendorsError) {
+    debug.push({ error: bumbuVendorsError.message, stage: "query_bumbu_vendors" });
+  } else if (bumbuVendors && bumbuVendors.length > 0) {
+    const { data: spiceReports, error: spiceError } = await supabase
       .from("daily_spice_reports")
       .select("*")
       .eq("report_date", date)
       .returns<DailySpiceReport[]>();
-    spiceReports = data ?? [];
+
     if (spiceError) debug.push({ error: spiceError.message, stage: "query_daily_spice_reports" });
-  }
 
-  for (const group of groups.values()) {
-    const groupDebug: Record<string, unknown> = {
-      batchNo: group.batchNo,
-      isBumbu: isBumbuVendor(group.vendorName),
-      phone: group.phone,
-      vendorName: group.vendorName,
-    };
-
-    if (!force) {
-      const { data: alreadySent, error: alreadySentError } = await supabase
-        .from("vendor_message_logs")
-        .select("id")
-        .eq("vendor_id", group.vendorId)
-        .eq("request_date", date)
-        .eq("batch_no", group.batchNo)
-        .eq("status", "success")
-        .limit(1)
-        .maybeSingle();
-
-      if (alreadySentError) groupDebug.alreadySentCheckError = alreadySentError.message;
-
-      if (alreadySent) {
-        skipped += 1;
-        groupDebug.result = "skipped_already_sent";
-        debug.push(groupDebug);
-        continue;
-      }
+    const message = buildSpiceSummaryMessage(dateLabel, spiceReports ?? []);
+    for (const vendor of bumbuVendors) {
+      await sendAndLog(vendor.id, vendor.name, 0, vendor.phone ?? null, message);
     }
-
-    const message = buildMessage(
-      group.vendorName,
-      group.batchNo,
-      dateLabel,
-      group.lines,
-      isBumbuVendor(group.vendorName),
-      spiceReports,
-    );
-
-    if (!group.phone) {
-      failed += 1;
-      const { error: insertError } = await supabase.from("vendor_message_logs").insert({
-        batch_no: group.batchNo,
-        error_message: "Nomor WhatsApp vendor belum diisi.",
-        message,
-        phone: null,
-        request_date: date,
-        source: "cron",
-        status: "failed",
-        vendor_id: group.vendorId,
-      });
-      groupDebug.result = "failed_no_phone";
-      if (insertError) groupDebug.insertError = insertError.message;
-      debug.push(groupDebug);
-      continue;
-    }
-
-    const normalizedPhone = normalizePhone(group.phone);
-    const result = await sendWhatsappMessageTo(normalizedPhone, message);
-    if (result.ok) sent += 1;
-    else failed += 1;
-
-    const { error: insertError } = await supabase.from("vendor_message_logs").insert({
-      batch_no: group.batchNo,
-      error_message: result.ok ? null : result.error,
-      message,
-      phone: normalizedPhone,
-      request_date: date,
-      source: "cron",
-      status: result.ok ? "success" : "failed",
-      vendor_id: group.vendorId,
-    });
-
-    groupDebug.result = result.ok ? "sent" : "send_failed";
-    groupDebug.normalizedPhone = normalizedPhone;
-    if (!result.ok) groupDebug.sendError = result.error;
-    if (insertError) groupDebug.insertError = insertError.message;
-    debug.push(groupDebug);
   }
 
   return NextResponse.json({ date, debug, failed, groupsFound: groups.size, sent, skipped });
