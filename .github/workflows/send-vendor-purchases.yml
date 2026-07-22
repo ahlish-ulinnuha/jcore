@@ -2,8 +2,8 @@ name: Send Vendor Purchases (WhatsApp)
 
 on:
   schedule:
-    # 02:00 UTC = 09:00 WIB
-    - cron: "0 2 * * *"
+    # 18:00 UTC (previous day) = 01:00 WIB
+    - cron: "0 18 * * *"
   workflow_dispatch:
     inputs:
       force:
