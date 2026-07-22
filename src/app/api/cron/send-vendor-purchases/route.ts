@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendWhatsappMessageTo } from "@/lib/whatsapp";
-import type { PurchaseRequestItem, Vendor } from "@/lib/types";
+import type { DailySpiceReport, PurchaseRequestItem, Vendor } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +40,34 @@ function normalizePhone(phone: string) {
   return digits;
 }
 
-function buildMessage(vendorName: string, batchNo: number, dateLabel: string, lines: string[]) {
-  return [`*Request ${vendorName} - Batch ${batchNo}*`, `Tanggal: ${dateLabel}`, "------------------------------", ...lines].join("\n");
+function isBumbuVendor(vendorName: string) {
+  return vendorName.trim().toLowerCase() === "bumbu";
+}
+
+function sumSpiceStock(reports: DailySpiceReport[]) {
+  return reports.reduce(
+    (totals, report) => ({
+      red: totals.red + Number(report.red_spice_stock),
+      white: totals.white + Number(report.white_spice_stock),
+    }),
+    { red: 0, white: 0 },
+  );
+}
+
+function buildMessage(vendorName: string, batchNo: number, dateLabel: string, lines: string[], spiceReports: DailySpiceReport[] = []) {
+  const parts = [`*Request ${vendorName} - Batch ${batchNo}*`, `Tanggal: ${dateLabel}`, "------------------------------", ...lines];
+  if (spiceReports.length > 0) {
+    const totals = sumSpiceStock(spiceReports);
+    parts.push(
+      "------------------------------",
+      "*Sisa Stock Bumbu*",
+      `Tanggal: ${dateLabel}`,
+      "",
+      `- Merah : ${totals.red}`,
+      `- Putih : ${totals.white}`,
+    );
+  }
+  return parts.join("\n");
 }
 
 export async function GET(request: Request) {
@@ -53,6 +79,7 @@ export async function GET(request: Request) {
   const supabase = createServiceClient();
   const date = todayJakarta();
   const dateLabel = displayDate(date);
+  const force = new URL(request.url).searchParams.get("force") === "true";
 
   const { data: items } = await supabase
     .from("purchase_request_items")
@@ -89,23 +116,42 @@ export async function GET(request: Request) {
   let failed = 0;
   let skipped = 0;
 
-  for (const group of groups.values()) {
-    const { data: alreadySent } = await supabase
-      .from("vendor_message_logs")
-      .select("id")
-      .eq("vendor_id", group.vendorId)
-      .eq("request_date", date)
-      .eq("batch_no", group.batchNo)
-      .eq("status", "success")
-      .limit(1)
-      .maybeSingle();
+  const needsSpiceSummary = Array.from(groups.values()).some((group) => isBumbuVendor(group.vendorName));
+  let spiceReports: DailySpiceReport[] = [];
+  if (needsSpiceSummary) {
+    const { data } = await supabase
+      .from("daily_spice_reports")
+      .select("*")
+      .eq("report_date", date)
+      .returns<DailySpiceReport[]>();
+    spiceReports = data ?? [];
+  }
 
-    if (alreadySent) {
-      skipped += 1;
-      continue;
+  for (const group of groups.values()) {
+    if (!force) {
+      const { data: alreadySent } = await supabase
+        .from("vendor_message_logs")
+        .select("id")
+        .eq("vendor_id", group.vendorId)
+        .eq("request_date", date)
+        .eq("batch_no", group.batchNo)
+        .eq("status", "success")
+        .limit(1)
+        .maybeSingle();
+
+      if (alreadySent) {
+        skipped += 1;
+        continue;
+      }
     }
 
-    const message = buildMessage(group.vendorName, group.batchNo, dateLabel, group.lines);
+    const message = buildMessage(
+      group.vendorName,
+      group.batchNo,
+      dateLabel,
+      group.lines,
+      isBumbuVendor(group.vendorName) ? spiceReports : [],
+    );
 
     if (!group.phone) {
       failed += 1;
