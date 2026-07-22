@@ -41,7 +41,7 @@ function normalizePhone(phone: string) {
 }
 
 function isBumbuVendor(vendorName: string) {
-  return vendorName.trim().toLowerCase() === "bumbu";
+  return vendorName.trim().toLowerCase().includes("bumbu");
 }
 
 function sumSpiceStock(reports: DailySpiceReport[]) {
@@ -54,18 +54,23 @@ function sumSpiceStock(reports: DailySpiceReport[]) {
   );
 }
 
-function buildMessage(vendorName: string, batchNo: number, dateLabel: string, lines: string[], spiceReports: DailySpiceReport[] = []) {
+function buildMessage(
+  vendorName: string,
+  batchNo: number,
+  dateLabel: string,
+  lines: string[],
+  includeSpiceSummary: boolean,
+  spiceReports: DailySpiceReport[],
+) {
   const parts = [`*Request ${vendorName} - Batch ${batchNo}*`, `Tanggal: ${dateLabel}`, "------------------------------", ...lines];
-  if (spiceReports.length > 0) {
-    const totals = sumSpiceStock(spiceReports);
-    parts.push(
-      "------------------------------",
-      "*Sisa Stock Bumbu*",
-      `Tanggal: ${dateLabel}`,
-      "",
-      `- Merah : ${totals.red}`,
-      `- Putih : ${totals.white}`,
-    );
+  if (includeSpiceSummary) {
+    parts.push("------------------------------", "*Sisa Stock Bumbu*", `Tanggal: ${dateLabel}`, "");
+    if (spiceReports.length > 0) {
+      const totals = sumSpiceStock(spiceReports);
+      parts.push(`- Merah : ${totals.red}`, `- Putih : ${totals.white}`);
+    } else {
+      parts.push("Belum ada laporan stock bumbu hari ini.");
+    }
   }
   return parts.join("\n");
 }
@@ -150,7 +155,8 @@ export async function GET(request: Request) {
       group.batchNo,
       dateLabel,
       group.lines,
-      isBumbuVendor(group.vendorName) ? spiceReports : [],
+      isBumbuVendor(group.vendorName),
+      spiceReports,
     );
 
     if (!group.phone) {
