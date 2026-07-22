@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { productDisplayName } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import type { ProductVendorPrice, PurchaseRequestItem, VendorReceipt } from "@/lib/types";
-import { saveAdminVendorItem } from "./actions";
+import { saveAdminVendorItem, updateVendorAutoSend } from "./actions";
 
 const statuses = ["requested", "confirmed", "unavailable", "partially_available", "fulfilled", "cancelled"] as const;
 
@@ -20,7 +20,9 @@ type AdminVendorItem = PurchaseRequestItem & {
 };
 
 type VendorGroup = {
+  autoSendPurchase: boolean;
   items: AdminVendorItem[];
+  phone: string | null;
   receipts: VendorReceipt[];
   vendorId: string;
   vendorName: string;
@@ -150,6 +152,19 @@ export function AdminVendorPortal({
               />
             </label>
           </div>
+
+          <form action={updateVendorAutoSend} className="vendor-auto-send-form">
+            <input name="vendor_id" type="hidden" value={group.vendorId} />
+            <div className="field">
+              <label>Nomor WhatsApp Vendor</label>
+              <input defaultValue={group.phone ?? ""} name="phone" placeholder="0812xxxxxxx" />
+            </div>
+            <label className="checkbox-line">
+              <input defaultChecked={group.autoSendPurchase} name="auto_send_purchase" type="checkbox" />
+              Kirim otomatis harian ke WhatsApp vendor ini
+            </label>
+            <SaveButton />
+          </form>
 
           <div className="receipt-list">
             {(receiptGroups[group.vendorId] ?? []).map((receipt) => (

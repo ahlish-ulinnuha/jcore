@@ -14,6 +14,7 @@ export const mainMenuItems = [
   { href: "/overtime-summary", key: "overtime_summary", label: "Overtime Summary", roles: ["admin"] },
   { href: "/admin/vendor", key: "admin_vendor", label: "Vendor", roles: ["admin"] },
   { href: "/vendor", key: "vendor_portal", label: "Vendor", roles: ["vendor"] },
+  { href: "/capabilities/send_vendor_message", key: "send_vendor_message", label: "Kirim Pesan Vendor (WhatsApp)", roles: ["admin"] },
 ] as const;
 
 export const masterMenuItems = [

@@ -1851,6 +1851,22 @@ th {
   margin: 0;
 }
 
+.vendor-auto-send-form {
+  align-items: center;
+  background: #fffafa;
+  border: 1px solid #efe7e6;
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.vendor-auto-send-form .field {
+  min-width: 180px;
+}
+
 .vendor-request-upload-grid {
   display: grid;
   gap: 14px;

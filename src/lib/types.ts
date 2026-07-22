@@ -26,6 +26,7 @@ export type Vendor = {
   contact_name: string | null;
   phone: string | null;
   is_active: boolean;
+  auto_send_purchase: boolean;
 };
 
 export type Brand = {
