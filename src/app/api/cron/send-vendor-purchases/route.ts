@@ -44,17 +44,28 @@ function isBumbuVendor(vendorName: string) {
   return vendorName.trim().toLowerCase() === "bumbu";
 }
 
-function buildSpiceSummaryLines(reports: DailySpiceReport[]) {
-  return reports
-    .slice()
-    .sort((a, b) => a.store_name.localeCompare(b.store_name))
-    .map((report) => `- ${report.store_name}: Merah ${Number(report.red_spice_stock)}, Putih ${Number(report.white_spice_stock)}`);
+function sumSpiceStock(reports: DailySpiceReport[]) {
+  return reports.reduce(
+    (totals, report) => ({
+      red: totals.red + Number(report.red_spice_stock),
+      white: totals.white + Number(report.white_spice_stock),
+    }),
+    { red: 0, white: 0 },
+  );
 }
 
-function buildMessage(vendorName: string, batchNo: number, dateLabel: string, lines: string[], spiceSummaryLines: string[] = []) {
+function buildMessage(vendorName: string, batchNo: number, dateLabel: string, lines: string[], spiceReports: DailySpiceReport[] = []) {
   const parts = [`*Request ${vendorName} - Batch ${batchNo}*`, `Tanggal: ${dateLabel}`, "------------------------------", ...lines];
-  if (spiceSummaryLines.length > 0) {
-    parts.push("------------------------------", "*Sisa Stock Bumbu*", ...spiceSummaryLines);
+  if (spiceReports.length > 0) {
+    const totals = sumSpiceStock(spiceReports);
+    parts.push(
+      "------------------------------",
+      "*Sisa Stock Bumbu*",
+      `Tanggal: ${dateLabel}`,
+      "",
+      `- Merah : ${totals.red}`,
+      `- Putih : ${totals.white}`,
+    );
   }
   return parts.join("\n");
 }
@@ -106,14 +117,14 @@ export async function GET(request: Request) {
   let skipped = 0;
 
   const needsSpiceSummary = Array.from(groups.values()).some((group) => isBumbuVendor(group.vendorName));
-  let spiceSummaryLines: string[] = [];
+  let spiceReports: DailySpiceReport[] = [];
   if (needsSpiceSummary) {
-    const { data: spiceReports } = await supabase
+    const { data } = await supabase
       .from("daily_spice_reports")
       .select("*")
       .eq("report_date", date)
       .returns<DailySpiceReport[]>();
-    spiceSummaryLines = buildSpiceSummaryLines(spiceReports ?? []);
+    spiceReports = data ?? [];
   }
 
   for (const group of groups.values()) {
@@ -139,7 +150,7 @@ export async function GET(request: Request) {
       group.batchNo,
       dateLabel,
       group.lines,
-      isBumbuVendor(group.vendorName) ? spiceSummaryLines : [],
+      isBumbuVendor(group.vendorName) ? spiceReports : [],
     );
 
     if (!group.phone) {
