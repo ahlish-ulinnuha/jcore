@@ -86,7 +86,7 @@ export async function GET(request: Request) {
   const dateLabel = displayDate(date);
   const force = new URL(request.url).searchParams.get("force") === "true";
 
-  const { data: items } = await supabase
+  const { data: items, error: itemsError } = await supabase
     .from("purchase_request_items")
     .select("*, products(*, brands(*)), vendors!inner(*), purchase_requests!inner(batch_no, request_date, status)")
     .eq("purchase_requests.request_date", date)
@@ -94,9 +94,13 @@ export async function GET(request: Request) {
     .eq("vendors.auto_send_purchase", true)
     .returns<ItemWithRelations[]>();
 
+  if (itemsError) {
+    return NextResponse.json({ error: itemsError.message, sent: 0, failed: 0, skipped: 0, stage: "query_items" }, { status: 500 });
+  }
+
   const rows = items ?? [];
   if (rows.length === 0) {
-    return NextResponse.json({ sent: 0, failed: 0, skipped: 0 });
+    return NextResponse.json({ sent: 0, failed: 0, skipped: 0, date, debug: "no submitted items today with auto_send_purchase vendors" });
   }
 
   const groups = new Map<string, VendorBatchGroup>();
@@ -120,21 +124,30 @@ export async function GET(request: Request) {
   let sent = 0;
   let failed = 0;
   let skipped = 0;
+  const debug: Record<string, unknown>[] = [];
 
   const needsSpiceSummary = Array.from(groups.values()).some((group) => isBumbuVendor(group.vendorName));
   let spiceReports: DailySpiceReport[] = [];
   if (needsSpiceSummary) {
-    const { data } = await supabase
+    const { data, error: spiceError } = await supabase
       .from("daily_spice_reports")
       .select("*")
       .eq("report_date", date)
       .returns<DailySpiceReport[]>();
     spiceReports = data ?? [];
+    if (spiceError) debug.push({ error: spiceError.message, stage: "query_daily_spice_reports" });
   }
 
   for (const group of groups.values()) {
+    const groupDebug: Record<string, unknown> = {
+      batchNo: group.batchNo,
+      isBumbu: isBumbuVendor(group.vendorName),
+      phone: group.phone,
+      vendorName: group.vendorName,
+    };
+
     if (!force) {
-      const { data: alreadySent } = await supabase
+      const { data: alreadySent, error: alreadySentError } = await supabase
         .from("vendor_message_logs")
         .select("id")
         .eq("vendor_id", group.vendorId)
@@ -144,8 +157,12 @@ export async function GET(request: Request) {
         .limit(1)
         .maybeSingle();
 
+      if (alreadySentError) groupDebug.alreadySentCheckError = alreadySentError.message;
+
       if (alreadySent) {
         skipped += 1;
+        groupDebug.result = "skipped_already_sent";
+        debug.push(groupDebug);
         continue;
       }
     }
@@ -161,7 +178,7 @@ export async function GET(request: Request) {
 
     if (!group.phone) {
       failed += 1;
-      await supabase.from("vendor_message_logs").insert({
+      const { error: insertError } = await supabase.from("vendor_message_logs").insert({
         batch_no: group.batchNo,
         error_message: "Nomor WhatsApp vendor belum diisi.",
         message,
@@ -171,6 +188,9 @@ export async function GET(request: Request) {
         status: "failed",
         vendor_id: group.vendorId,
       });
+      groupDebug.result = "failed_no_phone";
+      if (insertError) groupDebug.insertError = insertError.message;
+      debug.push(groupDebug);
       continue;
     }
 
@@ -179,7 +199,7 @@ export async function GET(request: Request) {
     if (result.ok) sent += 1;
     else failed += 1;
 
-    await supabase.from("vendor_message_logs").insert({
+    const { error: insertError } = await supabase.from("vendor_message_logs").insert({
       batch_no: group.batchNo,
       error_message: result.ok ? null : result.error,
       message,
@@ -189,7 +209,13 @@ export async function GET(request: Request) {
       status: result.ok ? "success" : "failed",
       vendor_id: group.vendorId,
     });
+
+    groupDebug.result = result.ok ? "sent" : "send_failed";
+    groupDebug.normalizedPhone = normalizedPhone;
+    if (!result.ok) groupDebug.sendError = result.error;
+    if (insertError) groupDebug.insertError = insertError.message;
+    debug.push(groupDebug);
   }
 
-  return NextResponse.json({ sent, failed, skipped });
+  return NextResponse.json({ date, debug, failed, groupsFound: groups.size, sent, skipped });
 }
