@@ -222,6 +222,7 @@ export type VendorMessageLog = {
   batch_no: number;
   channel: string;
   message: string;
+  phone: string | null;
   status: "success" | "failed";
   error_message: string | null;
   sent_by: string | null;
