@@ -52,8 +52,10 @@ export async function sendVendorRequestMessage(formData: FormData): Promise<Send
       batch_no: batchNo,
       error_message: "Nomor WhatsApp vendor belum diisi.",
       message,
+      phone: null,
       request_date: requestDate,
       sent_by: user.id,
+      source: "manual",
       status: "failed",
       vendor_id: vendorId,
     });
@@ -68,8 +70,10 @@ export async function sendVendorRequestMessage(formData: FormData): Promise<Send
     batch_no: batchNo,
     error_message: result.ok ? null : result.error,
     message,
+    phone: target,
     request_date: requestDate,
     sent_by: user.id,
+    source: "manual",
     status: result.ok ? "success" : "failed",
     vendor_id: vendorId,
   });

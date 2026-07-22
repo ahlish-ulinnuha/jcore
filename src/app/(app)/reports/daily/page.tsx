@@ -101,6 +101,10 @@ function messageStatusLabel(status: VendorMessageLog["status"]) {
   return status === "success" ? "Terkirim" : "Gagal";
 }
 
+function messageSourceLabel(source: VendorMessageLog["source"]) {
+  return source === "cron" ? "Otomatis (Cron)" : "Manual";
+}
+
 function formatMessageTime(value: string) {
   return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(value));
 }
@@ -408,9 +412,12 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
               <tr>
                 <th>Waktu</th>
                 <th>Vendor</th>
+                <th>No. WhatsApp</th>
                 <th>Batch</th>
+                <th>Sumber</th>
                 <th>Status</th>
                 <th>Keterangan</th>
+                <th>Pesan</th>
               </tr>
             </thead>
             <tbody>
@@ -418,16 +425,19 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
                 <tr key={log.id}>
                   <td>{formatMessageTime(log.created_at)}</td>
                   <td>{log.vendors?.name ?? "-"}</td>
+                  <td>{log.phone ?? log.vendors?.phone ?? "-"}</td>
                   <td>Batch {log.batch_no}</td>
+                  <td>{messageSourceLabel(log.source)}</td>
                   <td>
                     <span className={`payment-status-badge ${log.status === "success" ? "paid" : "unpaid"}`}>{messageStatusLabel(log.status)}</span>
                   </td>
                   <td>{log.error_message ?? "-"}</td>
+                  <td style={{ whiteSpace: "pre-wrap", minWidth: 220 }}>{log.message}</td>
                 </tr>
               ))}
               {(messageLogs ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={5}>Belum ada pesan yang dikirim untuk tanggal ini.</td>
+                  <td colSpan={8}>Belum ada pesan yang dikirim untuk tanggal ini.</td>
                 </tr>
               ) : null}
             </tbody>

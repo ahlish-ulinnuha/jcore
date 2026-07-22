@@ -113,14 +113,17 @@ export async function GET(request: Request) {
         batch_no: group.batchNo,
         error_message: "Nomor WhatsApp vendor belum diisi.",
         message,
+        phone: null,
         request_date: date,
+        source: "cron",
         status: "failed",
         vendor_id: group.vendorId,
       });
       continue;
     }
 
-    const result = await sendWhatsappMessageTo(normalizePhone(group.phone), message);
+    const normalizedPhone = normalizePhone(group.phone);
+    const result = await sendWhatsappMessageTo(normalizedPhone, message);
     if (result.ok) sent += 1;
     else failed += 1;
 
@@ -128,7 +131,9 @@ export async function GET(request: Request) {
       batch_no: group.batchNo,
       error_message: result.ok ? null : result.error,
       message,
+      phone: normalizedPhone,
       request_date: date,
+      source: "cron",
       status: result.ok ? "success" : "failed",
       vendor_id: group.vendorId,
     });
