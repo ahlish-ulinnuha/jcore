@@ -101,6 +101,10 @@ function messageStatusLabel(status: VendorMessageLog["status"]) {
   return status === "success" ? "Terkirim" : "Gagal";
 }
 
+function messageSourceLabel(source: VendorMessageLog["source"]) {
+  return source === "cron" ? "Otomatis (Cron)" : "Manual";
+}
+
 function formatMessageTime(value: string) {
   return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(value));
 }
@@ -410,6 +414,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
                 <th>Vendor</th>
                 <th>No. WhatsApp</th>
                 <th>Batch</th>
+                <th>Sumber</th>
                 <th>Status</th>
                 <th>Keterangan</th>
                 <th>Pesan</th>
@@ -422,6 +427,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
                   <td>{log.vendors?.name ?? "-"}</td>
                   <td>{log.phone ?? log.vendors?.phone ?? "-"}</td>
                   <td>Batch {log.batch_no}</td>
+                  <td>{messageSourceLabel(log.source)}</td>
                   <td>
                     <span className={`payment-status-badge ${log.status === "success" ? "paid" : "unpaid"}`}>{messageStatusLabel(log.status)}</span>
                   </td>
@@ -431,7 +437,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
               ))}
               {(messageLogs ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={7}>Belum ada pesan yang dikirim untuk tanggal ini.</td>
+                  <td colSpan={8}>Belum ada pesan yang dikirim untuk tanggal ini.</td>
                 </tr>
               ) : null}
             </tbody>

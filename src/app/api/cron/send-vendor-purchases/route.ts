@@ -115,6 +115,7 @@ export async function GET(request: Request) {
         message,
         phone: null,
         request_date: date,
+        source: "cron",
         status: "failed",
         vendor_id: group.vendorId,
       });
@@ -132,6 +133,7 @@ export async function GET(request: Request) {
       message,
       phone: normalizedPhone,
       request_date: date,
+      source: "cron",
       status: result.ok ? "success" : "failed",
       vendor_id: group.vendorId,
     });

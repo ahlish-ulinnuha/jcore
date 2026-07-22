@@ -55,6 +55,7 @@ export async function sendVendorRequestMessage(formData: FormData): Promise<Send
       phone: null,
       request_date: requestDate,
       sent_by: user.id,
+      source: "manual",
       status: "failed",
       vendor_id: vendorId,
     });
@@ -72,6 +73,7 @@ export async function sendVendorRequestMessage(formData: FormData): Promise<Send
     phone: target,
     request_date: requestDate,
     sent_by: user.id,
+    source: "manual",
     status: result.ok ? "success" : "failed",
     vendor_id: vendorId,
   });

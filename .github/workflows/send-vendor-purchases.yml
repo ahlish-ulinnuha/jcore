@@ -9,7 +9,6 @@ on:
 jobs:
   send:
     runs-on: ubuntu-latest
-    environment: Production
     steps:
       - name: Call cron endpoint
         env:
