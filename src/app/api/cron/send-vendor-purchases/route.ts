@@ -28,6 +28,13 @@ function todayJakarta() {
   }).format(new Date());
 }
 
+function yesterday(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() - 1);
+  return utcDate.toISOString().slice(0, 10);
+}
+
 function displayDate(value: string) {
   const [year, month, day] = value.split("-");
   if (!year || !month || !day) return value;
@@ -192,15 +199,16 @@ export async function GET(request: Request) {
   if (bumbuVendorsError) {
     debug.push({ error: bumbuVendorsError.message, stage: "query_bumbu_vendors" });
   } else if (bumbuVendors && bumbuVendors.length > 0) {
+    const spiceReportDate = yesterday(date);
     const { data: spiceReports, error: spiceError } = await supabase
       .from("daily_spice_reports")
       .select("*")
-      .eq("report_date", date)
+      .eq("report_date", spiceReportDate)
       .returns<DailySpiceReport[]>();
 
     if (spiceError) debug.push({ error: spiceError.message, stage: "query_daily_spice_reports" });
 
-    const message = buildSpiceSummaryMessage(dateLabel, spiceReports ?? []);
+    const message = buildSpiceSummaryMessage(displayDate(spiceReportDate), spiceReports ?? []);
     for (const vendor of bumbuVendors) {
       await sendAndLog(vendor.id, vendor.name, 0, vendor.phone ?? null, message);
     }
