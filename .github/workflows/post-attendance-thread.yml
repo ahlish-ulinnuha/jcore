@@ -1,0 +1,26 @@
+name: Post Attendance Thread (Slack)
+
+on:
+  schedule:
+    # 18:00 UTC (previous day) = 01:00 WIB
+    - cron: "0 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cron endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/cron/post-attendance-thread" \
+            -H "Authorization: Bearer $CRON_SECRET")
+          status_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "Response body: $body"
+          if [ "$status_code" -ge 300 ]; then
+            echo "Request failed with status $status_code"
+            exit 1
+          fi
