@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { IosInstallBanner } from "./IosInstallBanner";
 import { RegisterServiceWorker } from "./RegisterServiceWorker";
 
 export const metadata: Metadata = {
@@ -8,12 +9,18 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",
-    apple: "/icons/icon-192.png",
+    apple: "/icons/icon-180.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "JCore",
   },
 };
 
 export const viewport: Viewport = {
   themeColor: "#952423",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -21,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="id">
       <body>
         <RegisterServiceWorker />
+        <IosInstallBanner />
         {children}
       </body>
     </html>

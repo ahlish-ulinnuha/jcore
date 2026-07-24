@@ -3762,3 +3762,29 @@ th {
     gap: 6px;
   }
 }
+
+.ios-install-banner {
+  align-items: center;
+  background: #952423;
+  color: #fff;
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 16px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.ios-install-banner button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+}
