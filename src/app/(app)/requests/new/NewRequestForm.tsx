@@ -155,7 +155,7 @@ export function NewRequestForm({
 }) {
   const router = useRouter();
   const supabase = createClient();
-  const [requestDate, setRequestDate] = useState(request?.request_date ?? tomorrowJakarta());
+  const [requestDate, setRequestDate] = useState(request?.request_date ?? todayJakarta());
   const [notes, setNotes] = useState(request?.notes ?? "");
   const [items, setItems] = useState<DraftItem[]>(initialItems(requestItems));
   const [message, setMessage] = useState("");
@@ -357,6 +357,10 @@ export function NewRequestForm({
   }
 
   async function submitRequest() {
+    const batchNo = activeRequest?.batch_no ?? (await nextBatchNo());
+    const dayLabel = requestDate === todayJakarta() ? "HARI INI" : requestDate === tomorrowJakarta() ? "BESOK" : requestDate;
+    const confirmed = window.confirm(`Request ini untuk ${dayLabel} (${requestDate}), Batch ${batchNo}.\n\nLanjutkan submit?`);
+    if (!confirmed) return;
     await persistRequest("submitted");
   }
 
@@ -375,11 +379,6 @@ export function NewRequestForm({
             onChange={(event) => setRequestDate(event.target.value)}
             disabled={isSubmitted}
           />
-          {requestDate === todayJakarta() ? (
-            <p className="muted" style={{ color: "#952423" }}>
-              Tanggal ini hari ini. Request biasanya untuk besok ({tomorrowJakarta()}) - pastikan tanggal sudah benar.
-            </p>
-          ) : null}
         </div>
         <div className="field">
           <label>Store</label>
