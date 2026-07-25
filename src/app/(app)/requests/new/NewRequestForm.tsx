@@ -36,6 +36,13 @@ function todayJakarta() {
   }).format(new Date());
 }
 
+function tomorrowJakarta() {
+  const [year, month, day] = todayJakarta().split("-").map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() + 1);
+  return utcDate.toISOString().slice(0, 10);
+}
+
 function productLabel(product: Product) {
   const sku = product.sku ? `${product.sku} - ` : "";
   return `${sku}${productDisplayName(product)}`;
@@ -350,6 +357,10 @@ export function NewRequestForm({
   }
 
   async function submitRequest() {
+    const batchNo = activeRequest?.batch_no ?? (await nextBatchNo());
+    const dayLabel = requestDate === todayJakarta() ? "HARI INI" : requestDate === tomorrowJakarta() ? "BESOK" : requestDate;
+    const confirmed = window.confirm(`Request ini untuk ${dayLabel} (${requestDate}), Batch ${batchNo}.\n\nLanjutkan submit?`);
+    if (!confirmed) return;
     await persistRequest("submitted");
   }
 
