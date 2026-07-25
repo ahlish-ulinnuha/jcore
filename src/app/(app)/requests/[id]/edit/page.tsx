@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { ActivityLog, Product, Profile, PurchaseRequest, PurchaseRequestItem, Vendor } from "@/lib/types";
+import type { ActivityLog, Product, Profile, PurchaseRequest, PurchaseRequestItem } from "@/lib/types";
 import { NewRequestForm } from "../../new/NewRequestForm";
 import { deletePurchaseRequest } from "../../actions";
 
 type Params = Promise<{ id: string }>;
+
+const requestProductSelect = "id, brand_id, sku, name, unit, is_active, brands(id, name, is_active), product_vendors(id, product_id, vendor_id, is_default)";
 
 export default async function EditRequestPage({ params }: { params: Params }) {
   const supabase = await createClient();
@@ -17,11 +19,10 @@ export default async function EditRequestPage({ params }: { params: Params }) {
   if (!profile || profile.role === "vendor") redirect("/dashboard");
 
   const { id } = await params;
-  const [{ data: request }, { data: requestItems }, { data: products }, { data: vendors }, { data: activityLogs }] = await Promise.all([
+  const [{ data: request }, { data: requestItems }, { data: products }, { data: activityLogs }] = await Promise.all([
     supabase.from("purchase_requests").select("*").eq("id", id).single<PurchaseRequest>(),
     supabase.from("purchase_request_items").select("*, products(*, brands(*)), vendors(*)").eq("request_id", id).returns<PurchaseRequestItem[]>(),
-    supabase.from("products").select("*, brands(*), product_vendors(*, vendors(*))").eq("is_active", true).order("name").returns<Product[]>(),
-    supabase.from("vendors").select("*").eq("is_active", true).order("name").returns<Vendor[]>(),
+    supabase.from("products").select(requestProductSelect).eq("is_active", true).order("name").returns<Product[]>(),
     supabase
       .from("activity_logs")
       .select("*")
@@ -53,12 +54,11 @@ export default async function EditRequestPage({ params }: { params: Params }) {
         ) : null}
       </div>
 
-      {products?.length && vendors?.length ? (
+      {products?.length ? (
         <NewRequestForm
           activityLogs={activityLogs ?? []}
           products={products}
           profileName={profile.full_name}
-          vendors={vendors}
           userId={user.id}
           storeId={request.store_id}
           storeName={request.store_name}

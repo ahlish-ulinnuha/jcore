@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Product, Profile, Vendor } from "@/lib/types";
+import type { Product, Profile } from "@/lib/types";
 import { NewRequestForm } from "./NewRequestForm";
+
+const requestProductSelect = "id, brand_id, sku, name, unit, is_active, brands(id, name, is_active), product_vendors(id, product_id, vendor_id, is_default)";
 
 export default async function NewRequestPage() {
   const supabase = await createClient();
@@ -13,10 +15,12 @@ export default async function NewRequestPage() {
   const { data: profile } = await supabase.from("profiles").select("*, stores(*)").eq("id", user.id).single<Profile>();
   if (!profile || profile.role === "vendor") redirect("/dashboard");
 
-  const [{ data: products }, { data: vendors }] = await Promise.all([
-    supabase.from("products").select("*, brands(*), product_vendors(*, vendors(*))").eq("is_active", true).order("name").returns<Product[]>(),
-    supabase.from("vendors").select("*").eq("is_active", true).order("name").returns<Vendor[]>(),
-  ]);
+  const { data: products } = await supabase
+    .from("products")
+    .select(requestProductSelect)
+    .eq("is_active", true)
+    .order("name")
+    .returns<Product[]>();
 
   return (
     <>
@@ -28,11 +32,10 @@ export default async function NewRequestPage() {
         </div>
       </div>
 
-      {products?.length && vendors?.length ? (
+      {products?.length ? (
         <NewRequestForm
           products={products}
           profileName={profile.full_name}
-          vendors={vendors}
           userId={user.id}
           storeId={profile.store_id}
           storeName={profile.stores?.name ?? profile.store_name ?? "Toko Utama"}
@@ -40,7 +43,7 @@ export default async function NewRequestPage() {
       ) : (
         <section className="panel">
           <h2>Master data belum lengkap</h2>
-          <p className="muted">Isi dulu master barang dan vendor di Supabase sebelum membuat request.</p>
+          <p className="muted">Isi dulu master barang di Supabase sebelum membuat request.</p>
         </section>
       )}
     </>
