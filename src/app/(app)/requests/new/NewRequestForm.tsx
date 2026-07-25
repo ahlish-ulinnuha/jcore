@@ -36,6 +36,13 @@ function todayJakarta() {
   }).format(new Date());
 }
 
+function tomorrowJakarta() {
+  const [year, month, day] = todayJakarta().split("-").map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() + 1);
+  return utcDate.toISOString().slice(0, 10);
+}
+
 function productLabel(product: Product) {
   const sku = product.sku ? `${product.sku} - ` : "";
   return `${sku}${productDisplayName(product)}`;
@@ -148,7 +155,7 @@ export function NewRequestForm({
 }) {
   const router = useRouter();
   const supabase = createClient();
-  const [requestDate, setRequestDate] = useState(request?.request_date ?? todayJakarta());
+  const [requestDate, setRequestDate] = useState(request?.request_date ?? tomorrowJakarta());
   const [notes, setNotes] = useState(request?.notes ?? "");
   const [items, setItems] = useState<DraftItem[]>(initialItems(requestItems));
   const [message, setMessage] = useState("");
@@ -368,6 +375,11 @@ export function NewRequestForm({
             onChange={(event) => setRequestDate(event.target.value)}
             disabled={isSubmitted}
           />
+          {requestDate === todayJakarta() ? (
+            <p className="muted" style={{ color: "#952423" }}>
+              Tanggal ini hari ini. Request biasanya untuk besok ({tomorrowJakarta()}) - pastikan tanggal sudah benar.
+            </p>
+          ) : null}
         </div>
         <div className="field">
           <label>Store</label>
