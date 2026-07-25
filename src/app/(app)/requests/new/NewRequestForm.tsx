@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { productDisplayName } from "@/lib/format";
-import type { ActivityLog, Product, PurchaseRequest, PurchaseRequestItem, Vendor } from "@/lib/types";
+import type { ActivityLog, Product, PurchaseRequest, PurchaseRequestItem } from "@/lib/types";
 
 type DraftItem = {
   productId: string;
@@ -130,7 +130,6 @@ function initialItems(requestItems?: PurchaseRequestItem[]): DraftItem[] {
 export function NewRequestForm({
   products,
   profileName,
-  vendors,
   userId,
   storeId,
   storeName,
@@ -141,7 +140,6 @@ export function NewRequestForm({
   activityLogs?: ActivityLog[];
   products: Product[];
   profileName: string;
-  vendors: Vendor[];
   userId: string;
   storeId: string | null;
   storeName: string;
