@@ -85,12 +85,6 @@ export async function saveShoppingRecord(formData: FormData) {
   };
 
   const requestBody = JSON.stringify(payload);
-  console.info("[shopping] sending to Google Apps Script", {
-    commandText,
-    payload,
-    requestBody,
-    scriptUrl,
-  });
 
   let response: Response;
   try {
@@ -108,12 +102,6 @@ export async function saveShoppingRecord(formData: FormData) {
   if (!response.ok) {
     redirect(`/shopping?error=script-failed&status=${response.status}`);
   }
-
-  const responseText = await response.text();
-  console.info("[shopping] Google Apps Script response", {
-    body: responseText,
-    status: response.status,
-  });
 
   const redirectParams = new URLSearchParams();
   redirectParams.set("saved", "1");
