@@ -165,6 +165,7 @@ export function NewRequestForm({
 
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
   const isSubmitted = activeRequest?.status === "submitted";
+  const isDateLocked = Boolean(activeRequest?.id);
 
   useEffect(() => {
     if (!toast) return;
@@ -377,8 +378,11 @@ export function NewRequestForm({
             min={todayJakarta()}
             value={requestDate}
             onChange={(event) => setRequestDate(event.target.value)}
-            disabled={isSubmitted}
+            disabled={isDateLocked}
           />
+          {isDateLocked ? (
+            <p className="muted">Tanggal tidak bisa diubah setelah request disimpan. Buat request baru untuk tanggal lain.</p>
+          ) : null}
         </div>
         <div className="field">
           <label>Store</label>
