@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ dateLabel, missingStores: [], ok: true });
   }
 
-  const channel = process.env.SLACK_MISSING_REQUEST_CHANNEL_ID;
+  const channel = process.env.DAILY_REPORT_CHANNEL_ID;
   const lines = missingStores.map((store) => `- ${store.name}`);
   const message = [`*Belum ada request untuk ${dateLabel}*`, "Store berikut belum submit purchase request:", ...lines].join("\n");
 
