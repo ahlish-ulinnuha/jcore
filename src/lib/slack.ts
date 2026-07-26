@@ -1,5 +1,14 @@
 export type SendSlackResult = { ok: true; ts: string } | { ok: false; error: string };
 
+const VALID_SLACK_MEMBER_ID = /^[UW][A-Z0-9]+$/i;
+
+export function formatSlackMention(memberId: string | null | undefined, fallbackName: string) {
+  if (memberId && VALID_SLACK_MEMBER_ID.test(memberId)) {
+    return `<@${memberId}>`;
+  }
+  return fallbackName;
+}
+
 export async function sendSlackMessage(text: string, channelOverride?: string): Promise<SendSlackResult> {
   const token = process.env.SLACK_BOT_TOKEN;
   const channel = channelOverride ?? process.env.SLACK_ATTENDANCE_CHANNEL_ID;

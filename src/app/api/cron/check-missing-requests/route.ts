@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendSlackMessage } from "@/lib/slack";
+import { formatSlackMention, sendSlackMessage } from "@/lib/slack";
 import type { Store } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
   const channel = process.env.DAILY_REPORT_CHANNEL_ID;
   const lines = missingStores.map((store) => {
     const staff = staffByStoreId.get(store.id) ?? [];
-    const mentions = staff.map((member) => (member.slack_member_id ? `<@${member.slack_member_id}>` : member.full_name)).join(" ");
+    const mentions = staff.map((member) => formatSlackMention(member.slack_member_id, member.full_name)).join(" ");
     return mentions ? `- ${store.name}: ${mentions}` : `- ${store.name}`;
   });
   const message = [`*Belum ada request untuk ${dateLabel}*`, "Store berikut belum submit purchase request:", ...lines].join("\n");

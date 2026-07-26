@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendSlackMessage } from "@/lib/slack";
+import { formatSlackMention, sendSlackMessage } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
   }
 
   const lines = stillOpen.map((row) => {
-    const mention = row.profiles?.slack_member_id ? `<@${row.profiles.slack_member_id}>` : row.profiles?.full_name ?? "Unknown";
+    const mention = formatSlackMention(row.profiles?.slack_member_id, row.profiles?.full_name ?? "Unknown");
     return `- ${mention}`;
   });
 
