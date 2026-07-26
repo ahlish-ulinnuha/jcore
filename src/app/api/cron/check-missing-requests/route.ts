@@ -58,8 +58,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ dateLabel, missingStores: [], ok: true });
   }
 
+  const missingStoreIds = missingStores.map((store) => store.id);
+  const { data: staffRows, error: staffError } = await supabase
+    .from("profiles")
+    .select("full_name, slack_member_id, store_id")
+    .eq("role", "staff")
+    .in("store_id", missingStoreIds);
+
+  if (staffError) {
+    return NextResponse.json({ error: staffError.message, stage: "query_staff" }, { status: 500 });
+  }
+
+  const staffByStoreId = new Map<string, { full_name: string; slack_member_id: string | null }[]>();
+  for (const staff of staffRows ?? []) {
+    if (!staff.store_id) continue;
+    const list = staffByStoreId.get(staff.store_id) ?? [];
+    list.push({ full_name: staff.full_name, slack_member_id: staff.slack_member_id });
+    staffByStoreId.set(staff.store_id, list);
+  }
+
   const channel = process.env.DAILY_REPORT_CHANNEL_ID;
-  const lines = missingStores.map((store) => `- ${store.name}`);
+  const lines = missingStores.map((store) => {
+    const staff = staffByStoreId.get(store.id) ?? [];
+    const mentions = staff.map((member) => (member.slack_member_id ? `<@${member.slack_member_id}>` : member.full_name)).join(" ");
+    return mentions ? `- ${store.name}: ${mentions}` : `- ${store.name}`;
+  });
   const message = [`*Belum ada request untuk ${dateLabel}*`, "Store berikut belum submit purchase request:", ...lines].join("\n");
 
   const result = await sendSlackMessage(message, channel);
