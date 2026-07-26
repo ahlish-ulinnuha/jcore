@@ -8,6 +8,7 @@ const OFF_SHIFT_CODES = new Set(["OFF", "OL"]);
 
 type OpenAttendanceRow = {
   staff_id: string;
+  check_in_at: string;
   profiles: { full_name: string; slack_member_id: string | null } | null;
 };
 
@@ -20,6 +21,15 @@ function todayJakarta() {
   }).format(new Date());
 }
 
+function checkInDateJakarta(checkInAt: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+  }).format(new Date(checkInAt));
+}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -28,15 +38,14 @@ export async function GET(request: Request) {
 
   const supabase = createServiceClient();
   const date = todayJakarta();
-  const dayStart = `${date}T00:00:00+07:00`;
-  const dayEnd = `${date}T23:59:59+07:00`;
 
+  // Any still-open session counts, regardless of which day check-in happened -
+  // scoping to "today" would miss anyone who checked in before midnight WIB and
+  // still hasn't checked out.
   const { data: openAttendance, error: attendanceError } = await supabase
     .from("staff_attendance")
-    .select("staff_id, profiles(full_name, slack_member_id)")
+    .select("staff_id, check_in_at, profiles(full_name, slack_member_id)")
     .is("check_out_at", null)
-    .gte("check_in_at", dayStart)
-    .lte("check_in_at", dayEnd)
     .returns<OpenAttendanceRow[]>();
 
   if (attendanceError) {
@@ -45,21 +54,25 @@ export async function GET(request: Request) {
 
   const rows = openAttendance ?? [];
   const debug = {
-    dayEnd,
-    dayStart,
-    openSessions: rows.map((row) => ({ fullName: row.profiles?.full_name ?? null, staffId: row.staff_id })),
+    openSessions: rows.map((row) => ({
+      checkInAt: row.check_in_at,
+      checkInDate: checkInDateJakarta(row.check_in_at),
+      fullName: row.profiles?.full_name ?? null,
+      staffId: row.staff_id,
+    })),
   };
 
   if (rows.length === 0) {
     return NextResponse.json({ date, debug, missingCheckout: [], ok: true });
   }
 
-  const staffIds = rows.map((row) => row.staff_id);
+  const staffIds = Array.from(new Set(rows.map((row) => row.staff_id)));
+  const checkInDates = Array.from(new Set(rows.map((row) => checkInDateJakarta(row.check_in_at))));
   const { data: schedules, error: scheduleError } = await supabase
     .from("store_staff_schedules")
-    .select("staff_id, shift_code")
-    .eq("work_date", date)
-    .in("staff_id", staffIds);
+    .select("staff_id, work_date, shift_code")
+    .in("staff_id", staffIds)
+    .in("work_date", checkInDates);
 
   if (scheduleError) {
     return NextResponse.json({ error: scheduleError.message, stage: "query_schedules" }, { status: 500 });
@@ -67,21 +80,23 @@ export async function GET(request: Request) {
 
   Object.assign(debug, { schedules: schedules ?? [] });
 
-  const offStaffIds = new Set(
-    (schedules ?? []).filter((schedule) => schedule.shift_code && OFF_SHIFT_CODES.has(schedule.shift_code)).map((schedule) => schedule.staff_id),
+  const offKeys = new Set(
+    (schedules ?? [])
+      .filter((schedule) => schedule.shift_code && OFF_SHIFT_CODES.has(schedule.shift_code))
+      .map((schedule) => `${schedule.staff_id}:${schedule.work_date}`),
   );
 
-  const stillOpen = rows.filter((row) => !offStaffIds.has(row.staff_id));
+  const stillOpen = rows.filter((row) => !offKeys.has(`${row.staff_id}:${checkInDateJakarta(row.check_in_at)}`));
   if (stillOpen.length === 0) {
     return NextResponse.json({ date, debug, missingCheckout: [], ok: true });
   }
 
   const lines = stillOpen.map((row) => {
     const mention = formatSlackMention(row.profiles?.slack_member_id, row.profiles?.full_name ?? "Unknown");
-    return `- ${mention}`;
+    return `- ${mention} (checkin ${checkInDateJakarta(row.check_in_at)})`;
   });
 
-  const message = [`*Belum Checkout - ${date}*`, "Staff berikut belum checkout hari ini:", ...lines].join("\n");
+  const message = [`*Belum Checkout - ${date}*`, "Staff berikut belum checkout:", ...lines].join("\n");
   const result = await sendSlackMessage(message);
 
   if (!result.ok) {
