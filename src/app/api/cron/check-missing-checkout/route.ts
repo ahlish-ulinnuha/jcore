@@ -44,8 +44,14 @@ export async function GET(request: Request) {
   }
 
   const rows = openAttendance ?? [];
+  const debug = {
+    dayEnd,
+    dayStart,
+    openSessions: rows.map((row) => ({ fullName: row.profiles?.full_name ?? null, staffId: row.staff_id })),
+  };
+
   if (rows.length === 0) {
-    return NextResponse.json({ date, missingCheckout: [], ok: true });
+    return NextResponse.json({ date, debug, missingCheckout: [], ok: true });
   }
 
   const staffIds = rows.map((row) => row.staff_id);
@@ -59,13 +65,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: scheduleError.message, stage: "query_schedules" }, { status: 500 });
   }
 
+  Object.assign(debug, { schedules: schedules ?? [] });
+
   const offStaffIds = new Set(
     (schedules ?? []).filter((schedule) => schedule.shift_code && OFF_SHIFT_CODES.has(schedule.shift_code)).map((schedule) => schedule.staff_id),
   );
 
   const stillOpen = rows.filter((row) => !offStaffIds.has(row.staff_id));
   if (stillOpen.length === 0) {
-    return NextResponse.json({ date, missingCheckout: [], ok: true });
+    return NextResponse.json({ date, debug, missingCheckout: [], ok: true });
   }
 
   const lines = stillOpen.map((row) => {
@@ -77,8 +85,8 @@ export async function GET(request: Request) {
   const result = await sendSlackMessage(message);
 
   if (!result.ok) {
-    return NextResponse.json({ error: result.error, missingCheckout: stillOpen.map((row) => row.staff_id), ok: false }, { status: 500 });
+    return NextResponse.json({ debug, error: result.error, missingCheckout: stillOpen.map((row) => row.staff_id), ok: false }, { status: 500 });
   }
 
-  return NextResponse.json({ date, missingCheckout: stillOpen.map((row) => row.staff_id), ok: true });
+  return NextResponse.json({ date, debug, missingCheckout: stillOpen.map((row) => row.staff_id), ok: true });
 }
