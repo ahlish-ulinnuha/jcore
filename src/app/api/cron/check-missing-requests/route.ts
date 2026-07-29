@@ -37,10 +37,12 @@ export async function GET(request: Request) {
   const targetDate = tomorrow(todayJakarta());
   const dateLabel = displayDate(targetDate);
 
-  const { data: stores, error: storesError } = await supabase.from("stores").select("*").eq("is_active", true).returns<Store[]>();
+  const { data: allStores, error: storesError } = await supabase.from("stores").select("*").eq("is_active", true).returns<Store[]>();
   if (storesError) {
     return NextResponse.json({ error: storesError.message, stage: "query_stores" }, { status: 500 });
   }
+
+  const stores = (allStores ?? []).filter((store) => store.name.trim().toLowerCase() !== "all store");
 
   const { data: submittedRequests, error: requestsError } = await supabase
     .from("purchase_requests")
