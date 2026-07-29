@@ -314,12 +314,13 @@ function renderProducts({
           <div className="field"><label>SKU</label><input name="sku" /></div>
           <div className="field"><label>Nama Barang</label><input name="name" required /></div>
           <div className="field"><label>Unit</label><input name="unit" defaultValue="pcs" /></div>
+          <label className="checkbox-line"><input name="take_from_outlet_j2" type="checkbox" /> Ambil dari outlet J2</label>
           <MasterSubmitButton label="Tambah Barang" pendingLabel="Menambah..." variant="primary" />
         </div>
       </form>
       <section className="panel">
         <MasterFilter active={active} pageSize={pageSize} q={q} roleFilter="all" section="barang" storeFilter="all" storeRows={storeRows} />
-        <div className="table-wrap"><table><thead><tr><th>Barang</th><th>Brand</th><th>SKU</th><th>Unit</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>
+        <div className="table-wrap"><table><thead><tr><th>Barang</th><th>Brand</th><th>SKU</th><th>Unit</th><th>Aktif</th><th>Ambil dari J2</th><th>Aksi</th></tr></thead><tbody>
           {page.rows.map((product) => (
             <tr key={product.id}>
               <td><form id={`product-${product.id}`} action={updateProduct} className="inline-edit-form"><input name="id" type="hidden" value={product.id} /><input name="name" defaultValue={product.name} required /></form></td>
@@ -327,6 +328,7 @@ function renderProducts({
               <td><input name="sku" form={`product-${product.id}`} defaultValue={product.sku ?? ""} /></td>
               <td><input name="unit" form={`product-${product.id}`} defaultValue={product.unit} /></td>
               <td><input name="is_active" form={`product-${product.id}`} type="hidden" value="false" /><input name="is_active" form={`product-${product.id}`} type="checkbox" defaultChecked={product.is_active} /></td>
+              <td><input name="take_from_outlet_j2" form={`product-${product.id}`} type="hidden" value="false" /><input name="take_from_outlet_j2" form={`product-${product.id}`} type="checkbox" defaultChecked={product.take_from_outlet_j2} /></td>
               <td><div className="row-actions"><MasterSubmitButton form={`product-${product.id}`} label="Edit" pendingLabel="Menyimpan..." /><form action={deleteProduct}><input name="id" type="hidden" value={product.id} /><MasterSubmitButton label="Hapus" pendingLabel="Menghapus..." variant="danger" /></form></div></td>
             </tr>
           ))}

@@ -216,7 +216,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         status: item.status,
       };
       acc[key].qty += Number(item.qty);
-      const storeName = item.purchase_requests?.store_name?.trim();
+      const storeName = item.products?.take_from_outlet_j2 ? "J2" : item.purchase_requests?.store_name?.trim();
       if (storeName && !acc[key].storeNames.includes(storeName)) {
         acc[key].storeNames.push(storeName);
       }

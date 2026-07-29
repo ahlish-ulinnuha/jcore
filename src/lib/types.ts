@@ -43,6 +43,7 @@ export type Product = {
   name: string;
   unit: string;
   is_active: boolean;
+  take_from_outlet_j2: boolean;
   brands?: Brand | null;
   product_vendors?: ProductVendor[];
 };

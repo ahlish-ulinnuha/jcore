@@ -119,6 +119,7 @@ export async function createProduct(formData: FormData) {
     sku: text(formData, "sku") || null,
     name: text(formData, "name"),
     unit: text(formData, "unit") || "pcs",
+    take_from_outlet_j2: checked(formData, "take_from_outlet_j2"),
   });
   revalidatePath("/admin/master");
   await redirectWithToast("Barang berhasil ditambahkan.", "submit");
@@ -135,6 +136,7 @@ export async function updateProduct(formData: FormData) {
       name: text(formData, "name"),
       unit: text(formData, "unit") || "pcs",
       is_active: checked(formData, "is_active"),
+      take_from_outlet_j2: checked(formData, "take_from_outlet_j2"),
     })
     .eq("id", text(formData, "id"));
   revalidatePath("/admin/master");
