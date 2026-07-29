@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { sendSummaryToSlack } from "./actions";
 
 type SummaryRow = {
   productName: string;
@@ -44,8 +45,11 @@ export function CopySummaryButton({
 }) {
   const [copied, setCopied] = useState(false);
   const [includeSpiceStock, setIncludeSpiceStock] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState("");
 
-  async function copySummary() {
+  function buildSummaryText() {
     const activeDate = new URLSearchParams(window.location.search).get("date") ?? date;
     const grouped = rows.reduce<Record<string, SummaryRow[]>>((acc, row) => {
       acc[row.vendorName] ??= [];
@@ -78,10 +82,29 @@ export function CopySummaryButton({
         ].join("\n")
       : "";
     const allSections = spiceSection ? [...sections, spiceSection] : sections;
-    const text = [`*_📋✨ Summary Request ${formatDate(activeDate)}_*`, `Outlet: ${outletName}`, ...allSections].join("\n------------------------------ \n");
-    await navigator.clipboard.writeText(text);
+    return [`*_📋✨ Summary Request ${formatDate(activeDate)}_*`, `Outlet: ${outletName}`, ...allSections].join("\n------------------------------ \n");
+  }
+
+  async function copySummary() {
+    await navigator.clipboard.writeText(buildSummaryText());
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  async function sendToSlack() {
+    if (sending) return;
+    setSending(true);
+    setSendError("");
+    const formData = new FormData();
+    formData.set("message", buildSummaryText());
+    const result = await sendSummaryToSlack(formData);
+    setSending(false);
+    if (!result.ok) {
+      setSendError(result.error);
+      return;
+    }
+    setSent(true);
+    window.setTimeout(() => setSent(false), 1800);
   }
 
   return (
@@ -97,6 +120,15 @@ export function CopySummaryButton({
       <button className="button outline" disabled={rows.length === 0 && (!includeSpiceStock || !spiceRows?.length)} onClick={copySummary} type="button">
         {copied ? "Copied" : "Copy Summary"}
       </button>
+      <button
+        className="button outline"
+        disabled={sending || (rows.length === 0 && (!includeSpiceStock || !spiceRows?.length))}
+        onClick={sendToSlack}
+        type="button"
+      >
+        {sending ? "Mengirim..." : sent ? "Terkirim" : "Send to Slack"}
+      </button>
+      {sendError ? <span className="muted" style={{ color: "#952423" }}>{sendError}</span> : null}
     </div>
   );
 }
