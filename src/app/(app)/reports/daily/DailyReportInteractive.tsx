@@ -7,6 +7,7 @@ import { SendVendorMessageButton } from "./SendVendorMessageButton";
 
 type InteractiveRow = {
   batchNo: number;
+  itemNotes: string[];
   productName: string;
   qty: number;
   rowKey: string;
@@ -16,7 +17,6 @@ type InteractiveRow = {
   unit: string;
   vendorId: string;
   vendorName: string;
-  vendorNotes: string[];
 };
 
 type VendorGroup = {
@@ -90,7 +90,7 @@ export function DailyReportInteractive({
     batchGroup.vendors.flatMap((vendor) =>
       vendor.rows.map((row) => ({
         groupOverride: j2Keys.has(row.rowKey) ? "J2" : undefined,
-        note: isAdmin && row.vendorNotes.length > 0 ? row.vendorNotes.join("; ") : undefined,
+        note: isAdmin && row.itemNotes.length > 0 ? row.itemNotes.join("; ") : undefined,
         productName: row.summaryProductName,
         qty: row.qty,
         storeNames: row.storeNames,

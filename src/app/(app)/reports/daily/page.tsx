@@ -26,7 +26,7 @@ type ReportRow = {
   summaryProductName: string;
   qty: number;
   storeNames: string[];
-  vendorNotes: string[];
+  itemNotes: string[];
   unit: string;
   status: PurchaseRequestItem["status"];
 };
@@ -197,7 +197,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         summaryProductName: summaryProductName(item),
         qty: 0,
         storeNames: [],
-        vendorNotes: [],
+        itemNotes: [],
         unit: item.unit,
         status: item.status,
       };
@@ -206,9 +206,9 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
       if (storeName && !acc[key].storeNames.includes(storeName)) {
         acc[key].storeNames.push(storeName);
       }
-      const vendorNote = item.vendor_note?.trim();
-      if (vendorNote && !acc[key].vendorNotes.includes(vendorNote)) {
-        acc[key].vendorNotes.push(vendorNote);
+      const itemNote = item.item_note?.trim();
+      if (itemNote && !acc[key].itemNotes.includes(itemNote)) {
+        acc[key].itemNotes.push(itemNote);
       }
       return acc;
     }, {}),
@@ -246,7 +246,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         unit: row.unit,
         vendorId: row.vendorId,
         vendorName: row.vendorName,
-        vendorNotes: row.vendorNotes,
+        itemNotes: row.itemNotes,
       })),
       vendorId: vendor.vendorId,
       vendorMessage: buildVendorMessage(vendor.vendorName, batchGroup.batchNo, requestDateLabel, vendor.rows),

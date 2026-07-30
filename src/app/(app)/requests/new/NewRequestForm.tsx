@@ -11,6 +11,7 @@ type DraftItem = {
   vendorId: string;
   qty: string;
   unit: string;
+  note: string;
 };
 
 type ProductPickerProps = {
@@ -118,6 +119,7 @@ function emptyItem(): DraftItem {
     vendorId: "",
     qty: "1",
     unit: "pcs",
+    note: "",
   };
 }
 
@@ -128,6 +130,7 @@ function initialItems(requestItems?: PurchaseRequestItem[]): DraftItem[] {
       vendorId: item.vendor_id,
       qty: String(item.qty),
       unit: item.unit,
+      note: item.item_note ?? "",
     }));
   }
 
@@ -304,6 +307,7 @@ export function NewRequestForm({
         vendor_id: item.vendorId,
         qty: Number(item.qty),
         unit: item.unit,
+        item_note: item.note.trim() || null,
       })),
     );
 
@@ -404,6 +408,7 @@ export function NewRequestForm({
             <tr>
               <th>Barang</th>
               <th>Qty</th>
+              <th>Catatan</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -420,6 +425,14 @@ export function NewRequestForm({
                 </td>
                 <td>
                   <input min="0.01" step="0.01" type="number" value={item.qty} onChange={(event) => updateItem(index, { qty: event.target.value })} disabled={isSubmitted} />
+                </td>
+                <td>
+                  <input
+                    disabled={isSubmitted}
+                    onChange={(event) => updateItem(index, { note: event.target.value })}
+                    placeholder="Opsional"
+                    value={item.note}
+                  />
                 </td>
                 <td>
                   <button
