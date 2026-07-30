@@ -4,8 +4,7 @@ import { allowedMenuKeysForRole, hasMenuAccess } from "@/lib/menu-access";
 import { createClient } from "@/lib/supabase/server";
 import { productDisplayName } from "@/lib/format";
 import type { DailySpiceReport, Profile, ProfileMenuAccess, PurchaseRequest, PurchaseRequestItem, Store, VendorMessageLog } from "@/lib/types";
-import { CopySummaryButton } from "./CopySummaryButton";
-import { SendVendorMessageButton } from "./SendVendorMessageButton";
+import { DailyReportInteractive } from "./DailyReportInteractive";
 
 type ItemWithRequest = PurchaseRequestItem & {
   purchase_requests?: {
@@ -66,21 +65,6 @@ const requestStatusOptions = [
   { label: "Draft", value: "draft" },
   { label: "All Request Status", value: "all" },
 ];
-
-function statusLabel(status: PurchaseRequestItem["status"]) {
-  if (status === "fulfilled") return "Fulfilled";
-  if (status === "unavailable") return "Unavailable";
-  return status.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function statusIcon(status: PurchaseRequestItem["status"]) {
-  if (status === "fulfilled") return "✓";
-  if (status === "unavailable") return "∅";
-  if (status === "partially_available") return "½";
-  if (status === "cancelled") return "×";
-  if (status === "confirmed") return "✓";
-  return "⏳";
-}
 
 function summaryProductName(item: ItemWithRequest) {
   const name = item.products?.name?.toLowerCase() ?? "-";
@@ -216,7 +200,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         status: item.status,
       };
       acc[key].qty += Number(item.qty);
-      const storeName = item.products?.take_from_outlet_j2 ? "J2" : item.purchase_requests?.store_name?.trim();
+      const storeName = item.purchase_requests?.store_name?.trim();
       if (storeName && !acc[key].storeNames.includes(storeName)) {
         acc[key].storeNames.push(storeName);
       }
@@ -242,6 +226,26 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     return { batchNo, vendors };
   });
   const requestDateLabel = displayDate(date);
+  const interactiveBatchGroups = batchVendorGroups.map((batchGroup) => ({
+    batchNo: batchGroup.batchNo,
+    vendors: batchGroup.vendors.map((vendor) => ({
+      rows: vendor.rows.map((row) => ({
+        batchNo: row.batchNo,
+        productName: row.productName,
+        qty: row.qty,
+        rowKey: `${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`,
+        status: row.status,
+        storeNames: row.storeNames,
+        summaryProductName: row.summaryProductName,
+        unit: row.unit,
+        vendorId: row.vendorId,
+        vendorName: row.vendorName,
+      })),
+      vendorId: vendor.vendorId,
+      vendorMessage: buildVendorMessage(vendor.vendorName, batchGroup.batchNo, requestDateLabel, vendor.rows),
+      vendorName: vendor.vendorName,
+    })),
+  }));
   const selectedStoreName =
     profile.role === "staff"
       ? profile.store_name ?? spiceReports?.[0]?.store_name ?? rows[0]?.purchase_requests?.store_name ?? "store staff"
@@ -330,67 +334,21 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
             Reset
           </Link>
         </form>
-        <div className="filter-actions">
-          <CopySummaryButton
-            date={date}
-            includeAllStoreTotal={profile.role === "admin"}
-            outletName={selectedStoreName}
-            rows={reportRows.map((row) => ({
-              productName: row.summaryProductName,
-              qty: row.qty,
-              storeNames: row.storeNames,
-              unit: row.unit,
-              vendorName: row.vendorName,
-            }))}
-            spiceRows={(spiceReports ?? []).map((report) => ({
-              redSpiceStock: Number(report.red_spice_stock),
-              storeName: report.store_name,
-              whiteSpiceStock: Number(report.white_spice_stock),
-            }))}
-          />
-        </div>
       </section>
 
-      {batchVendorGroups.map((batchGroup) => (
-        <section className="panel daily-report-group" key={batchGroup.batchNo}>
-          <h2>
-            Batch {batchGroup.batchNo} <span className="muted">- {requestDateLabel}</span>
-          </h2>
-          <div className="vendor-report-list">
-            {batchGroup.vendors.map((vendor) => (
-              <section className="vendor-report-group" key={`${batchGroup.batchNo}-${vendor.vendorId}`}>
-                <div className="vendor-report-group-head">
-                  <h3>{vendor.vendorName}</h3>
-                  {canSendVendorMessage ? (
-                    <SendVendorMessageButton
-                      batchNo={Number(batchGroup.batchNo)}
-                      message={buildVendorMessage(vendor.vendorName, batchGroup.batchNo, requestDateLabel, vendor.rows)}
-                      requestDate={date}
-                      vendorId={vendor.vendorId}
-                    />
-                  ) : null}
-                </div>
-                <div className="report-item-list">
-                  {vendor.rows.map((row) => (
-                    <div className="report-item-row" key={`${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`}>
-                      <span className="report-item-product">{row.productName}</span>
-                      <span className="report-item-qty">{row.qty}</span>
-                      <span
-                        aria-label={statusLabel(row.status)}
-                        className={`status-icon ${row.status}`}
-                        data-tooltip={statusLabel(row.status)}
-                        tabIndex={0}
-                      >
-                        {statusIcon(row.status)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </section>
-      ))}
+      <DailyReportInteractive
+        batchGroups={interactiveBatchGroups}
+        canSendVendorMessage={canSendVendorMessage}
+        date={date}
+        includeAllStoreTotal={profile.role === "admin"}
+        outletName={selectedStoreName}
+        requestDateLabel={requestDateLabel}
+        spiceRows={(spiceReports ?? []).map((report) => ({
+          redSpiceStock: Number(report.red_spice_stock),
+          storeName: report.store_name,
+          whiteSpiceStock: Number(report.white_spice_stock),
+        }))}
+      />
 
       {reportRows.length === 0 ? (
         <section className="panel">
