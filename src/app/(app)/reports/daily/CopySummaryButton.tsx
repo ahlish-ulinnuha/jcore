@@ -4,6 +4,7 @@ import { useState } from "react";
 import { sendSummaryToSlack } from "./actions";
 
 type SummaryRow = {
+  groupOverride?: string;
   productName: string;
   qty: number;
   storeNames?: string[];
@@ -52,15 +53,16 @@ export function CopySummaryButton({
   function buildSummaryText() {
     const activeDate = new URLSearchParams(window.location.search).get("date") ?? date;
     const grouped = rows.reduce<Record<string, SummaryRow[]>>((acc, row) => {
-      acc[row.vendorName] ??= [];
-      acc[row.vendorName].push(row);
+      const groupName = row.groupOverride ?? row.vendorName;
+      acc[groupName] ??= [];
+      acc[groupName].push(row);
       return acc;
     }, {});
 
     const sections = Object.entries(grouped)
-      .sort(([vendorA], [vendorB]) => vendorA.localeCompare(vendorB))
-      .map(([vendorName, vendorRows]) => {
-        const lines = vendorRows
+      .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
+      .map(([groupName, groupRows]) => {
+        const lines = groupRows
           .sort((a, b) => a.productName.localeCompare(b.productName))
           .map((row) => {
             const storeNames = shouldShowStoreNames(row.vendorName) ? [...(row.storeNames ?? [])].sort().join(" ") : "";
@@ -68,7 +70,7 @@ export function CopySummaryButton({
             const unit = row.unit?.trim();
             return `- ${productName} / ${row.qty}${unit ? ` ${unit}` : ""}`;
           });
-        return [`Request ${vendorName}`, ...lines].join("\n");
+        return [`Request ${groupName}`, ...lines].join("\n");
       });
 
     const sortedSpiceRows = includeSpiceStock ? [...(spiceRows ?? [])].sort((a, b) => a.storeName.localeCompare(b.storeName)) : [];
