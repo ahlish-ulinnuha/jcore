@@ -46,6 +46,7 @@ export function CopySummaryButton({
 }) {
   const [copied, setCopied] = useState(false);
   const [includeSpiceStock, setIncludeSpiceStock] = useState(true);
+  const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
@@ -83,7 +84,8 @@ export function CopySummaryButton({
           ...(includeAllStoreTotal ? [`- All store: merah ${formatQty(totalRedSpice)}, putih ${formatQty(totalWhiteSpice)}`] : []),
         ].join("\n")
       : "";
-    const allSections = spiceSection ? [...sections, spiceSection] : sections;
+    const noteSection = note.trim() ? `Catatan: ${note.trim()}` : "";
+    const allSections = [...sections, spiceSection, noteSection].filter(Boolean);
     return [`*_📋✨ Summary Request ${formatDate(activeDate)}_*`, `Outlet: ${outletName}`, ...allSections].join("\n------------------------------ \n");
   }
 
@@ -119,6 +121,12 @@ export function CopySummaryButton({
         />
         Tampilkan stock bumbu
       </label>
+      <input
+        className="copy-summary-note"
+        onChange={(event) => setNote(event.target.value)}
+        placeholder="Catatan (opsional)"
+        value={note}
+      />
       <button className="button outline" disabled={rows.length === 0 && (!includeSpiceStock || !spiceRows?.length)} onClick={copySummary} type="button">
         {copied ? "Copied" : "Copy Summary"}
       </button>
