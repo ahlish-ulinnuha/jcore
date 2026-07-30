@@ -36,6 +36,10 @@ type SpiceSummaryRow = {
   whiteSpiceStock: number;
 };
 
+function shouldShowStoreNames(vendorName: string) {
+  return vendorName.trim().toUpperCase() !== "NR";
+}
+
 function statusLabel(status: PurchaseRequestItem["status"]) {
   if (status === "fulfilled") return "Fulfilled";
   if (status === "unavailable") return "Unavailable";
@@ -126,6 +130,9 @@ export function DailyReportInteractive({
                   {vendor.rows.map((row) => (
                     <div className="report-item-row" key={row.rowKey}>
                       <span className="report-item-product">{row.productName}</span>
+                      {shouldShowStoreNames(row.vendorName) && row.storeNames.length > 0 ? (
+                        <span className="report-item-stores muted">{[...row.storeNames].sort().join(", ")}</span>
+                      ) : null}
                       <span className="report-item-qty">{row.qty}</span>
                       <label className="checkbox-line report-item-j2-toggle">
                         <input checked={j2Keys.has(row.rowKey)} onChange={() => toggleJ2(row.rowKey)} type="checkbox" />
