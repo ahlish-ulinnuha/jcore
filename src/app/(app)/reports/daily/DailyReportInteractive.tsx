@@ -16,6 +16,7 @@ type InteractiveRow = {
   unit: string;
   vendorId: string;
   vendorName: string;
+  vendorNotes: string[];
 };
 
 type VendorGroup = {
@@ -60,6 +61,7 @@ export function DailyReportInteractive({
   canSendVendorMessage,
   date,
   includeAllStoreTotal,
+  isAdmin,
   outletName,
   requestDateLabel,
   spiceRows,
@@ -68,6 +70,7 @@ export function DailyReportInteractive({
   canSendVendorMessage: boolean;
   date: string;
   includeAllStoreTotal: boolean;
+  isAdmin: boolean;
   outletName: string;
   requestDateLabel: string;
   spiceRows: SpiceSummaryRow[];
@@ -87,6 +90,7 @@ export function DailyReportInteractive({
     batchGroup.vendors.flatMap((vendor) =>
       vendor.rows.map((row) => ({
         groupOverride: j2Keys.has(row.rowKey) ? "J2" : undefined,
+        note: isAdmin && row.vendorNotes.length > 0 ? row.vendorNotes.join("; ") : undefined,
         productName: row.summaryProductName,
         qty: row.qty,
         storeNames: row.storeNames,
