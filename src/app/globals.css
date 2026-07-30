@@ -744,17 +744,22 @@ button:disabled {
 
 .request-items-table th:first-child,
 .request-items-table td:first-child {
-  width: 72%;
+  width: 42%;
 }
 
 .request-items-table th:nth-child(2),
 .request-items-table td:nth-child(2) {
-  width: 14%;
+  width: 12%;
 }
 
 .request-items-table th:nth-child(3),
 .request-items-table td:nth-child(3) {
-  width: 14%;
+  width: 28%;
+}
+
+.request-items-table th:nth-child(4),
+.request-items-table td:nth-child(4) {
+  width: 18%;
 }
 
 table {
@@ -3489,7 +3494,9 @@ th {
   .request-items-table th:nth-child(2),
   .request-items-table td:nth-child(2),
   .request-items-table th:nth-child(3),
-  .request-items-table td:nth-child(3) {
+  .request-items-table td:nth-child(3),
+  .request-items-table th:nth-child(4),
+  .request-items-table td:nth-child(4) {
     width: 100%;
   }
 

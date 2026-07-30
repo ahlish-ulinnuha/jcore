@@ -138,6 +138,9 @@ export function DailyReportInteractive({
                       {shouldShowStoreNames(row.vendorName) && row.storeNames.length > 0 ? (
                         <span className="report-item-stores muted">{[...row.storeNames].sort().join(", ")}</span>
                       ) : null}
+                      {isAdmin && row.itemNotes.length > 0 ? (
+                        <span className="report-item-note muted">{row.itemNotes.join("; ")}</span>
+                      ) : null}
                       <span className="report-item-qty">{row.qty}</span>
                       <label className="checkbox-line report-item-j2-toggle">
                         <input checked={j2Keys.has(row.rowKey)} onChange={() => toggleJ2(row.rowKey)} type="checkbox" />
