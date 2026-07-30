@@ -26,6 +26,7 @@ type ReportRow = {
   summaryProductName: string;
   qty: number;
   storeNames: string[];
+  itemNotes: string[];
   unit: string;
   status: PurchaseRequestItem["status"];
 };
@@ -196,6 +197,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         summaryProductName: summaryProductName(item),
         qty: 0,
         storeNames: [],
+        itemNotes: [],
         unit: item.unit,
         status: item.status,
       };
@@ -203,6 +205,10 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
       const storeName = item.purchase_requests?.store_name?.trim();
       if (storeName && !acc[key].storeNames.includes(storeName)) {
         acc[key].storeNames.push(storeName);
+      }
+      const itemNote = item.item_note?.trim();
+      if (itemNote && !acc[key].itemNotes.includes(itemNote)) {
+        acc[key].itemNotes.push(itemNote);
       }
       return acc;
     }, {}),
@@ -240,6 +246,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         unit: row.unit,
         vendorId: row.vendorId,
         vendorName: row.vendorName,
+        itemNotes: row.itemNotes,
       })),
       vendorId: vendor.vendorId,
       vendorMessage: buildVendorMessage(vendor.vendorName, batchGroup.batchNo, requestDateLabel, vendor.rows),
@@ -341,6 +348,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         canSendVendorMessage={canSendVendorMessage}
         date={date}
         includeAllStoreTotal={profile.role === "admin"}
+        isAdmin={profile.role === "admin"}
         outletName={selectedStoreName}
         requestDateLabel={requestDateLabel}
         spiceRows={(spiceReports ?? []).map((report) => ({

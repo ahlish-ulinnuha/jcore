@@ -7,6 +7,7 @@ import { SendVendorMessageButton } from "./SendVendorMessageButton";
 
 type InteractiveRow = {
   batchNo: number;
+  itemNotes: string[];
   productName: string;
   qty: number;
   rowKey: string;
@@ -60,6 +61,7 @@ export function DailyReportInteractive({
   canSendVendorMessage,
   date,
   includeAllStoreTotal,
+  isAdmin,
   outletName,
   requestDateLabel,
   spiceRows,
@@ -68,6 +70,7 @@ export function DailyReportInteractive({
   canSendVendorMessage: boolean;
   date: string;
   includeAllStoreTotal: boolean;
+  isAdmin: boolean;
   outletName: string;
   requestDateLabel: string;
   spiceRows: SpiceSummaryRow[];
@@ -87,6 +90,7 @@ export function DailyReportInteractive({
     batchGroup.vendors.flatMap((vendor) =>
       vendor.rows.map((row) => ({
         groupOverride: j2Keys.has(row.rowKey) ? "J2" : undefined,
+        note: isAdmin && row.itemNotes.length > 0 ? row.itemNotes.join("; ") : undefined,
         productName: row.summaryProductName,
         qty: row.qty,
         storeNames: row.storeNames,
@@ -133,6 +137,9 @@ export function DailyReportInteractive({
                       <span className="report-item-product">{row.productName}</span>
                       {shouldShowStoreNames(row.vendorName) && row.storeNames.length > 0 ? (
                         <span className="report-item-stores muted">{[...row.storeNames].sort().join(", ")}</span>
+                      ) : null}
+                      {isAdmin && row.itemNotes.length > 0 ? (
+                        <span className="report-item-note muted">{row.itemNotes.join("; ")}</span>
                       ) : null}
                       <span className="report-item-qty">{row.qty}</span>
                       <label className="checkbox-line report-item-j2-toggle">

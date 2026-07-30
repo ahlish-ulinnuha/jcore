@@ -195,6 +195,7 @@ export type PurchaseRequestItem = {
   unit: string;
   status: "requested" | "confirmed" | "unavailable" | "partially_available" | "fulfilled" | "cancelled";
   vendor_note: string | null;
+  item_note: string | null;
   receipt_url: string | null;
   products?: Product | null;
   vendors?: Vendor | null;
