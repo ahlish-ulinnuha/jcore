@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import type { Profile, ShiftType, Store } from "@/lib/types";
-import { reviewStaffScheduleRequest } from "../actions";
+import { requireScheduleRequestApprover, reviewStaffScheduleRequest } from "../actions";
 import { ScheduleSubmitButton } from "../ScheduleSubmitButton";
 
 type SearchParams = Promise<{
@@ -60,14 +58,7 @@ function fullDateLabel(dateValue: string) {
 }
 
 export default async function ScheduleRequestsPage({ searchParams }: { searchParams: SearchParams }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
-  if (!profile || profile.role !== "admin") redirect("/dashboard");
+  const { supabase } = await requireScheduleRequestApprover();
 
   const params = await searchParams;
   const selectedMonth = params.month ?? currentMonthJakarta();
