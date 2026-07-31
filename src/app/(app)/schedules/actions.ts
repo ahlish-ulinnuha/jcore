@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { allowedMenuKeysForRole, hasMenuAccess } from "@/lib/menu-access";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, StoreScheduleMonth, StoreStaffSchedule } from "@/lib/types";
+import { sendTelegramMessage } from "@/lib/telegram";
+import type { Profile, ProfileMenuAccess, ShiftType, Store, StoreScheduleMonth, StoreStaffSchedule } from "@/lib/types";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -35,6 +37,29 @@ async function requireStaffOrAdmin() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
   if (!profile || profile.role === "vendor") redirect("/dashboard");
+
+  return { profile, supabase, user };
+}
+
+export async function requireScheduleRequestApprover() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
+  if (!profile || profile.role === "vendor") redirect("/dashboard");
+
+  if (profile.role === "admin") return { profile, supabase, user };
+
+  const { data: menuAccessRows } = await supabase
+    .from("profile_menu_access")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .returns<ProfileMenuAccess[]>();
+  const allowedMenuKeys = allowedMenuKeysForRole(profile.role, menuAccessRows ?? []);
+  if (!hasMenuAccess("schedule_requests", allowedMenuKeys)) redirect("/dashboard");
 
   return { profile, supabase, user };
 }
@@ -253,12 +278,28 @@ export async function createStaffScheduleRequest(formData: FormData) {
     store_id: profile.store_id,
   });
 
+  const [{ data: store }, { data: shiftType }] = await Promise.all([
+    supabase.from("stores").select("*").eq("id", profile.store_id).maybeSingle<Store>(),
+    supabase.from("shift_types").select("*").eq("code", shiftCode).maybeSingle<ShiftType>(),
+  ]);
+
+  await sendTelegramMessage(
+    [
+      "🗓️ Request Schedule Baru",
+      `Staff: ${profile.full_name}`,
+      `Store: ${store?.name ?? "-"}`,
+      `Tanggal: ${requestDate}`,
+      `Schedule: ${shiftCode}${shiftType?.name ? ` - ${shiftType.name}` : ""}`,
+      ...(notes ? [`Catatan: ${notes}`] : []),
+    ].join("\n"),
+  );
+
   revalidatePath("/schedules");
   redirect(`/schedules?store=${profile.store_id}&month=${month}&requested=1`);
 }
 
 export async function reviewStaffScheduleRequest(formData: FormData) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireScheduleRequestApprover();
   const requestId = text(formData, "request_id");
   const decision = text(formData, "decision");
   const reviewNotes = text(formData, "review_notes");
