@@ -102,8 +102,10 @@ export function CopySummaryButton({
     if (sending) return;
     setSending(true);
     setSendError("");
+    const activeDate = new URLSearchParams(window.location.search).get("date") ?? date;
     const formData = new FormData();
     formData.set("message", buildSummaryText());
+    formData.set("request_date", activeDate);
     const result = await sendSummaryToSlack(formData);
     setSending(false);
     if (!result.ok) {
