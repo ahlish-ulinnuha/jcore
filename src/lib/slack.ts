@@ -9,7 +9,7 @@ export function formatSlackMention(memberId: string | null | undefined, fallback
   return fallbackName;
 }
 
-export async function sendSlackMessage(text: string, channelOverride?: string): Promise<SendSlackResult> {
+export async function sendSlackMessage(text: string, channelOverride?: string, threadTs?: string): Promise<SendSlackResult> {
   const token = process.env.SLACK_BOT_TOKEN;
   const channel = channelOverride ?? process.env.SLACK_ATTENDANCE_CHANNEL_ID;
   if (!token) return { error: "SLACK_BOT_TOKEN belum diisi di environment.", ok: false };
@@ -17,7 +17,7 @@ export async function sendSlackMessage(text: string, channelOverride?: string): 
 
   try {
     const response = await fetch("https://slack.com/api/chat.postMessage", {
-      body: JSON.stringify({ channel, text }),
+      body: JSON.stringify(threadTs ? { channel, text, thread_ts: threadTs } : { channel, text }),
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",

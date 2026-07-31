@@ -84,6 +84,15 @@ export async function sendVendorRequestMessage(formData: FormData): Promise<Send
   return result;
 }
 
+function todayJakarta() {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+  }).format(new Date());
+}
+
 export async function sendSummaryToSlack(formData: FormData): Promise<SendSlackSummaryResult> {
   const supabase = await createClient();
   const {
@@ -98,7 +107,20 @@ export async function sendSummaryToSlack(formData: FormData): Promise<SendSlackS
   if (!message) return { error: "Tidak ada summary untuk dikirim.", ok: false };
 
   const channel = process.env.DAILY_REPORT_CHANNEL_ID;
-  const result = await sendSlackMessage(message, channel);
+
+  let threadTs: string | undefined;
+  if (channel) {
+    const { data: thread } = await supabase
+      .from("slack_daily_threads")
+      .select("thread_ts")
+      .eq("channel_id", channel)
+      .eq("thread_date", todayJakarta())
+      .eq("thread_type", "daily_report")
+      .maybeSingle();
+    threadTs = thread?.thread_ts ?? undefined;
+  }
+
+  const result = await sendSlackMessage(message, channel, threadTs);
   if (!result.ok) return { error: result.error, ok: false };
 
   return { ok: true };
