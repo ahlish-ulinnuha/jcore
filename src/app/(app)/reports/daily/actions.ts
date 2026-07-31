@@ -106,6 +106,7 @@ export async function sendSummaryToSlack(formData: FormData): Promise<SendSlackS
   const message = text(formData, "message");
   if (!message) return { error: "Tidak ada summary untuk dikirim.", ok: false };
 
+  const requestDate = text(formData, "request_date") || todayJakarta();
   const channel = process.env.DAILY_REPORT_CHANNEL_ID;
 
   let threadTs: string | undefined;
@@ -114,7 +115,7 @@ export async function sendSummaryToSlack(formData: FormData): Promise<SendSlackS
       .from("slack_daily_threads")
       .select("thread_ts")
       .eq("channel_id", channel)
-      .eq("thread_date", todayJakarta())
+      .eq("thread_date", requestDate)
       .eq("thread_type", "daily_report")
       .maybeSingle();
     threadTs = thread?.thread_ts ?? undefined;
