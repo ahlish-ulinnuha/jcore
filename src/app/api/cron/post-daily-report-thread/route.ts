@@ -6,13 +6,16 @@ export const dynamic = "force-dynamic";
 
 const THREAD_TYPE = "daily_report";
 
-function todayJakarta() {
-  return new Intl.DateTimeFormat("en-CA", {
+function tomorrowJakarta() {
+  const todayLabel = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     month: "2-digit",
     timeZone: "Asia/Jakarta",
     year: "numeric",
   }).format(new Date());
+  const todayUtc = new Date(`${todayLabel}T00:00:00Z`);
+  todayUtc.setUTCDate(todayUtc.getUTCDate() + 1);
+  return todayUtc.toISOString().slice(0, 10);
 }
 
 function displayDate(value: string) {
@@ -33,7 +36,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServiceClient();
-  const date = todayJakarta();
+  const date = tomorrowJakarta();
   const dateLabel = displayDate(date);
 
   const { data: existing } = await supabase
