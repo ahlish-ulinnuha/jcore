@@ -492,7 +492,12 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
                         </span>
                       </td>
                       <td>
-                        <SalesDetailButton expenseDetail={item.expense_detail} notes={item.notes} />
+                        <SalesDetailButton
+                          attachmentName={item.attachment_name}
+                          attachmentUrl={item.attachment_url}
+                          expenseDetail={item.expense_detail}
+                          notes={item.notes}
+                        />
                       </td>
                       {profile.role === "admin" ? (
                         <td>

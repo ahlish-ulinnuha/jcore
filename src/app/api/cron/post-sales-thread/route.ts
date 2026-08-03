@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { sendSlackMessage } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
+
+const THREAD_TYPE = "sales_report";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -29,12 +32,37 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "SALES_REPORT_CHANNEL_ID belum diisi di environment.", ok: false }, { status: 500 });
   }
 
-  const dateLabel = displayDate(todayJakarta());
-  const result = await sendSlackMessage(`Sales ${dateLabel}`, channel);
+  const supabase = createServiceClient();
+  const date = todayJakarta();
+  const dateLabel = displayDate(date);
 
+  const { data: existing } = await supabase
+    .from("slack_daily_threads")
+    .select("thread_ts")
+    .eq("channel_id", channel)
+    .eq("thread_date", date)
+    .eq("thread_type", THREAD_TYPE)
+    .maybeSingle();
+
+  if (existing?.thread_ts) {
+    return NextResponse.json({ dateLabel, ok: true, skipped: true, threadTs: existing.thread_ts });
+  }
+
+  const result = await sendSlackMessage(`Sales ${dateLabel}`, channel);
   if (!result.ok) {
     return NextResponse.json({ error: result.error, ok: false }, { status: 500 });
   }
 
-  return NextResponse.json({ dateLabel, ok: true });
+  const { error: insertError } = await supabase.from("slack_daily_threads").insert({
+    channel_id: channel,
+    thread_date: date,
+    thread_type: THREAD_TYPE,
+    thread_ts: result.ts,
+  });
+
+  if (insertError) {
+    return NextResponse.json({ dateLabel, error: insertError.message, ok: false, stage: "insert_thread", threadTs: result.ts }, { status: 500 });
+  }
+
+  return NextResponse.json({ dateLabel, ok: true, threadTs: result.ts });
 }
