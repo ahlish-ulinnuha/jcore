@@ -56,12 +56,26 @@ function statusIcon(status: PurchaseRequestItem["status"]) {
   return "⏳";
 }
 
+function displayDate(value: string) {
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}-${month}-${year}`;
+}
+
+function lastRequestLabel(storeNames: string[], lastRequestByStoreName: Record<string, string>) {
+  const dates = storeNames.map((storeName) => lastRequestByStoreName[storeName]).filter((value): value is string => Boolean(value));
+  if (dates.length === 0) return "-";
+  const latest = dates.reduce((max, value) => (value > max ? value : max));
+  return displayDate(latest);
+}
+
 export function DailyReportInteractive({
   batchGroups,
   canSendVendorMessage,
   date,
   includeAllStoreTotal,
   isAdmin,
+  lastRequestByStoreName,
   outletName,
   requestDateLabel,
   spiceRows,
@@ -71,6 +85,7 @@ export function DailyReportInteractive({
   date: string;
   includeAllStoreTotal: boolean;
   isAdmin: boolean;
+  lastRequestByStoreName: Record<string, string>;
   outletName: string;
   requestDateLabel: string;
   spiceRows: SpiceSummaryRow[];
@@ -131,31 +146,47 @@ export function DailyReportInteractive({
                     />
                   ) : null}
                 </div>
-                <div className="report-item-list">
-                  {vendor.rows.map((row) => (
-                    <div className="report-item-row" key={row.rowKey}>
-                      <span className="report-item-product">{row.productName}</span>
-                      {shouldShowStoreNames(row.vendorName) && row.storeNames.length > 0 ? (
-                        <span className="report-item-stores muted">{[...row.storeNames].sort().join(", ")}</span>
-                      ) : null}
-                      {isAdmin && row.itemNotes.length > 0 ? (
-                        <span className="report-item-note muted">{row.itemNotes.join("; ")}</span>
-                      ) : null}
-                      <span className="report-item-qty">{row.qty}</span>
-                      <label className="checkbox-line report-item-j2-toggle">
-                        <input checked={j2Keys.has(row.rowKey)} onChange={() => toggleJ2(row.rowKey)} type="checkbox" />
-                        Ambil dari J2
-                      </label>
-                      <span
-                        aria-label={statusLabel(row.status)}
-                        className={`status-icon ${row.status}`}
-                        data-tooltip={statusLabel(row.status)}
-                        tabIndex={0}
-                      >
-                        {statusIcon(row.status)}
-                      </span>
-                    </div>
-                  ))}
+                <div className="table-wrap compact-mobile-wrap">
+                  <table className="compact-mobile-table report-item-table">
+                    <thead>
+                      <tr>
+                        <th>Barang</th>
+                        <th>Store</th>
+                        {isAdmin ? <th>Catatan</th> : null}
+                        <th>Qty</th>
+                        <th>Ambil dari J2</th>
+                        <th>Status</th>
+                        {isAdmin ? <th>Last Request</th> : null}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vendor.rows.map((row) => (
+                        <tr key={row.rowKey}>
+                          <td>{row.productName}</td>
+                          <td>{shouldShowStoreNames(row.vendorName) ? [...row.storeNames].sort().join(", ") : "-"}</td>
+                          {isAdmin ? <td>{row.itemNotes.length > 0 ? row.itemNotes.join("; ") : "-"}</td> : null}
+                          <td>{row.qty}</td>
+                          <td>
+                            <label className="checkbox-line report-item-j2-toggle">
+                              <input checked={j2Keys.has(row.rowKey)} onChange={() => toggleJ2(row.rowKey)} type="checkbox" />
+                              Ambil dari J2
+                            </label>
+                          </td>
+                          <td>
+                            <span
+                              aria-label={statusLabel(row.status)}
+                              className={`status-icon ${row.status}`}
+                              data-tooltip={statusLabel(row.status)}
+                              tabIndex={0}
+                            >
+                              {statusIcon(row.status)}
+                            </span>
+                          </td>
+                          {isAdmin ? <td>{lastRequestLabel(row.storeNames, lastRequestByStoreName)}</td> : null}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </section>
             ))}

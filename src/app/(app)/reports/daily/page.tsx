@@ -168,6 +168,21 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     .limit(50)
     .returns<VendorMessageLog[]>();
 
+  const lastRequestByStoreName = new Map<string, string>();
+  if (profile.role === "admin") {
+    const { data: previousRequests } = await supabase
+      .from("purchase_requests")
+      .select("store_name, request_date")
+      .eq("status", "submitted")
+      .lt("request_date", date)
+      .order("request_date", { ascending: false });
+
+    for (const row of previousRequests ?? []) {
+      if (!row.store_name || lastRequestByStoreName.has(row.store_name)) continue;
+      lastRequestByStoreName.set(row.store_name, row.request_date);
+    }
+  }
+
   const rows = items ?? [];
   const batchNumbers = Array.from(new Set(rows.map((item) => item.purchase_requests?.batch_no ?? 0).filter(Boolean))).sort((a, b) => b - a);
   const selectedBatch = params.batch ?? "all";
@@ -349,6 +364,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         date={date}
         includeAllStoreTotal={profile.role === "admin"}
         isAdmin={profile.role === "admin"}
+        lastRequestByStoreName={Object.fromEntries(lastRequestByStoreName)}
         outletName={selectedStoreName}
         requestDateLabel={requestDateLabel}
         spiceRows={(spiceReports ?? []).map((report) => ({
