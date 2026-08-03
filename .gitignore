@@ -7,4 +7,4 @@ coverage
 *.log
 node_modules/
 .next/
-.bash_profiletsconfig.tsbuildinfo
+*.tsbuildinfo
