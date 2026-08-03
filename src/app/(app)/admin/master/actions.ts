@@ -164,6 +164,7 @@ export async function upsertProfile(formData: FormData) {
     store_id: storeId || null,
     store_name: store?.name ?? null,
     slack_member_id: text(formData, "slack_member_id") || null,
+    phone: text(formData, "phone") || null,
   });
 
   if (formData.get("menu_access_form") === "1") {
