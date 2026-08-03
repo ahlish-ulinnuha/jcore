@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
 import { HistoryDateRangeField } from "./HistoryDateRangeField";
+import { SalesDeleteButton } from "./SalesDeleteButton";
 import { SalesDetailButton } from "./SalesDetailButton";
 import { SalesReportForm } from "./SalesReportForm";
 import { SalesSavedModal } from "./SalesSavedModal";
@@ -508,9 +509,7 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
                             <form action={deleteDailySalesReport}>
                               <input name="id" type="hidden" value={item.id} />
                               <input name="redirect_to" type="hidden" value={currentPath} />
-                              <button className="button danger" type="submit">
-                                Hapus
-                              </button>
+                              <SalesDeleteButton />
                             </form>
                           </div>
                         </td>
