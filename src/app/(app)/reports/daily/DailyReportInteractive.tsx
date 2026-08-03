@@ -8,6 +8,7 @@ import { SendVendorMessageButton } from "./SendVendorMessageButton";
 type InteractiveRow = {
   batchNo: number;
   itemNotes: string[];
+  productId: string;
   productName: string;
   qty: number;
   rowKey: string;
@@ -62,11 +63,9 @@ function displayDate(value: string) {
   return `${day}-${month}-${year}`;
 }
 
-function lastRequestLabel(storeNames: string[], lastRequestByStoreName: Record<string, string>) {
-  const dates = storeNames.map((storeName) => lastRequestByStoreName[storeName]).filter((value): value is string => Boolean(value));
-  if (dates.length === 0) return "-";
-  const latest = dates.reduce((max, value) => (value > max ? value : max));
-  return displayDate(latest);
+function lastRequestLabel(productId: string, lastRequestByProductId: Record<string, string>) {
+  const value = lastRequestByProductId[productId];
+  return value ? displayDate(value) : "-";
 }
 
 export function DailyReportInteractive({
@@ -75,7 +74,7 @@ export function DailyReportInteractive({
   date,
   includeAllStoreTotal,
   isAdmin,
-  lastRequestByStoreName,
+  lastRequestByProductId,
   outletName,
   requestDateLabel,
   spiceRows,
@@ -85,7 +84,7 @@ export function DailyReportInteractive({
   date: string;
   includeAllStoreTotal: boolean;
   isAdmin: boolean;
-  lastRequestByStoreName: Record<string, string>;
+  lastRequestByProductId: Record<string, string>;
   outletName: string;
   requestDateLabel: string;
   spiceRows: SpiceSummaryRow[];
@@ -182,7 +181,7 @@ export function DailyReportInteractive({
                               {statusIcon(row.status)}
                             </span>
                           </td>
-                          {isAdmin ? <td>{lastRequestLabel(row.storeNames, lastRequestByStoreName)}</td> : null}
+                          {isAdmin ? <td>{lastRequestLabel(row.productId, lastRequestByProductId)}</td> : null}
                         </tr>
                       ))}
                     </tbody>
