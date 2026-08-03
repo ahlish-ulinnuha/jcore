@@ -168,18 +168,26 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     .limit(50)
     .returns<VendorMessageLog[]>();
 
-  const lastRequestByStoreName = new Map<string, string>();
+  const lastRequestByProductId = new Map<string, string>();
   if (profile.role === "admin") {
-    const { data: previousRequests } = await supabase
-      .from("purchase_requests")
-      .select("store_name, request_date")
-      .eq("status", "submitted")
-      .lt("request_date", date)
-      .order("request_date", { ascending: false });
+    const productIds = Array.from(new Set((items ?? []).map((item) => item.product_id)));
+    if (productIds.length > 0) {
+      const { data: previousItems } = await supabase
+        .from("purchase_request_items")
+        .select("product_id, purchase_requests!inner(request_date, status)")
+        .in("product_id", productIds)
+        .eq("purchase_requests.status", "submitted")
+        .lt("purchase_requests.request_date", date)
+        .returns<{ product_id: string; purchase_requests?: { request_date?: string } }[]>();
 
-    for (const row of previousRequests ?? []) {
-      if (!row.store_name || lastRequestByStoreName.has(row.store_name)) continue;
-      lastRequestByStoreName.set(row.store_name, row.request_date);
+      for (const row of previousItems ?? []) {
+        const requestDate = row.purchase_requests?.request_date;
+        if (!requestDate) continue;
+        const current = lastRequestByProductId.get(row.product_id);
+        if (!current || requestDate > current) {
+          lastRequestByProductId.set(row.product_id, requestDate);
+        }
+      }
     }
   }
 
@@ -252,6 +260,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     vendors: batchGroup.vendors.map((vendor) => ({
       rows: vendor.rows.map((row) => ({
         batchNo: row.batchNo,
+        productId: row.productId,
         productName: row.productName,
         qty: row.qty,
         rowKey: `${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`,
@@ -364,7 +373,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         date={date}
         includeAllStoreTotal={profile.role === "admin"}
         isAdmin={profile.role === "admin"}
-        lastRequestByStoreName={Object.fromEntries(lastRequestByStoreName)}
+        lastRequestByProductId={Object.fromEntries(lastRequestByProductId)}
         outletName={selectedStoreName}
         requestDateLabel={requestDateLabel}
         spiceRows={(spiceReports ?? []).map((report) => ({
