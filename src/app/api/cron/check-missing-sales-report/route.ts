@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { sendTelegramMessage } from "@/lib/telegram";
 import { sendWhatsappMessageTo } from "@/lib/whatsapp";
 import type { Store } from "@/lib/types";
 
@@ -95,6 +96,14 @@ export async function GET(request: Request) {
     const result = await sendWhatsappMessageTo(targets.join(","), message);
     results.push(result.ok ? { ok: true, store: store.name } : { error: result.error, ok: false, store: store.name });
   }
+
+  await sendTelegramMessage(
+    [
+      `⚠️ Sales Report belum dikirim (${dateLabel})`,
+      "Store berikut belum submit sales report:",
+      ...missingStores.map((store) => `- ${store.name}`),
+    ].join("\n"),
+  );
 
   const ok = results.every((result) => result.ok);
   return NextResponse.json({ dateLabel, ok, results }, { status: ok ? 200 : 500 });

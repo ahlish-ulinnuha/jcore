@@ -3,9 +3,13 @@
 import { useState } from "react";
 
 export function SalesDetailButton({
+  attachmentName,
+  attachmentUrl,
   expenseDetail,
   notes,
 }: {
+  attachmentName?: string | null;
+  attachmentUrl?: string | null;
   expenseDetail: string | null;
   notes: string | null;
 }) {
@@ -35,6 +39,18 @@ export function SalesDetailButton({
             <div className="detail-block">
               <span>Note</span>
               <p>{notes?.trim() || "-"}</p>
+            </div>
+            <div className="detail-block">
+              <span>Lampiran</span>
+              <p>
+                {attachmentUrl ? (
+                  <a href={attachmentUrl} target="_blank">
+                    {attachmentName ?? "Lihat lampiran"}
+                  </a>
+                ) : (
+                  "-"
+                )}
+              </p>
             </div>
           </section>
         </div>

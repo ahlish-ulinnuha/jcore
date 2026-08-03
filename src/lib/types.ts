@@ -274,6 +274,8 @@ export type DailySalesReport = {
   expense_detail: string | null;
   difference: number;
   notes: string | null;
+  attachment_url: string | null;
+  attachment_name: string | null;
   created_by: string;
   updated_by: string | null;
   created_at: string;

@@ -121,7 +121,8 @@ export async function sendSummaryToSlack(formData: FormData): Promise<SendSlackS
     threadTs = thread?.thread_ts ?? undefined;
   }
 
-  const result = await sendSlackMessage(message, channel, threadTs);
+  const messageWithSender = `${message}\n------------------------------ \nDikirim oleh: ${profile.full_name}`;
+  const result = await sendSlackMessage(messageWithSender, channel, threadTs);
   if (!result.ok) return { error: result.error, ok: false };
 
   return { ok: true };

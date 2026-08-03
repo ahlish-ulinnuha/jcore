@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { DailySalesReport, Profile, Store } from "@/lib/types";
-import { saveDailySalesReport } from "./actions";
+import { saveDailySalesReport, sendSalesSummaryToSlack } from "./actions";
 
 const denominations = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100] as const;
 
@@ -72,6 +72,37 @@ function SaveButton() {
     <button className={`button primary ${pending ? "saving" : ""}`} disabled={pending} type="submit">
       {pending ? "Menyimpan..." : "Simpan Report Sales"}
     </button>
+  );
+}
+
+function SendToSlackButton({ reportId }: { reportId: string }) {
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  async function sendToSlack() {
+    if (sending) return;
+    setSending(true);
+    setError("");
+    const formData = new FormData();
+    formData.set("report_id", reportId);
+    const result = await sendSalesSummaryToSlack(formData);
+    setSending(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setSent(true);
+    window.setTimeout(() => setSent(false), 1800);
+  }
+
+  return (
+    <>
+      <button className="button outline" disabled={sending} onClick={sendToSlack} type="button">
+        {sending ? "Mengirim..." : sent ? "Terkirim" : "Send to Slack"}
+      </button>
+      {error ? <span className="muted" style={{ color: "#952423" }}>{error}</span> : null}
+    </>
   );
 }
 
@@ -199,8 +230,19 @@ export function SalesReportForm({
         <textarea defaultValue={effectiveReport?.notes ?? ""} name="notes" placeholder="Alasan jika ada selisih plus/minus" rows={3} />
       </div>
 
+      <div className="field">
+        <label>Lampiran</label>
+        <input accept="image/*,.pdf" name="attachment" type="file" />
+        {effectiveReport?.attachment_url ? (
+          <a className="muted" href={effectiveReport.attachment_url} target="_blank">
+            {effectiveReport.attachment_name ?? "Lihat lampiran saat ini"}
+          </a>
+        ) : null}
+      </div>
+
       <div className="row-actions">
         <SaveButton />
+        {effectiveReport?.id ? <SendToSlackButton reportId={effectiveReport.id} /> : null}
       </div>
     </form>
   );
