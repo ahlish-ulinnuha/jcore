@@ -8,6 +8,7 @@ export type Profile = {
   store_id: string | null;
   store_name: string | null;
   slack_member_id: string | null;
+  phone: string | null;
   stores?: Store | null;
 };
 
