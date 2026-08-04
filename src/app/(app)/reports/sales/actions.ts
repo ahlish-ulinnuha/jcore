@@ -96,10 +96,12 @@ export async function saveDailySalesReport(formData: FormData) {
     updated_by: user.id,
   };
 
-  if (existingReport?.id) {
-    await supabase.from("daily_sales_reports").update(payload).eq("id", existingReport.id);
-  } else {
-    await supabase.from("daily_sales_reports").insert({ ...payload, created_by: user.id });
+  const { error: saveError } = existingReport?.id
+    ? await supabase.from("daily_sales_reports").update(payload).eq("id", existingReport.id)
+    : await supabase.from("daily_sales_reports").insert({ ...payload, created_by: user.id });
+
+  if (saveError) {
+    redirect(`/reports/sales?date=${reportDate}&store=${store.id}&error=save-failed`);
   }
 
   revalidatePath("/reports/sales");
