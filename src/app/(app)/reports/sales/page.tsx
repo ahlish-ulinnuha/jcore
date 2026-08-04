@@ -240,6 +240,12 @@ export default async function DailySalesReportPage({ searchParams }: { searchPar
         </section>
       ) : null}
 
+      {params.error === "save-failed" ? (
+        <section className="panel alert" style={{ marginBottom: 16 }}>
+          Report sales gagal disimpan. Silakan coba lagi atau hubungi admin.
+        </section>
+      ) : null}
+
       <section className="panel sales-report-panel">
         <Suspense fallback={null}>
           <SalesReportForm
