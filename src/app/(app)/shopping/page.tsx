@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { HistoryDateRangeField } from "@/app/(app)/reports/sales/HistoryDateRangeField";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ShoppingRecord, Store } from "@/lib/types";
 import { ImportShoppingButton } from "./ImportShoppingButton";
@@ -26,7 +27,8 @@ type SearchParams = Promise<{
   category?: string;
   deleted?: string;
   error?: string;
-  history_date?: string;
+  history_date_from?: string;
+  history_date_to?: string;
   page?: string;
   page_size?: string;
   payment_status?: string;
@@ -185,7 +187,8 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   const selectedChartStore = profile.role === "admin" ? params.chart_store ?? "all" : selectedStoreId;
   const chartDateFrom = params.chart_date_from ?? monthStartJakarta();
   const chartDateTo = params.chart_date_to ?? todayJakarta();
-  const historyDate = params.history_date ?? "";
+  const historyDateFrom = params.history_date_from ?? "";
+  const historyDateTo = params.history_date_to ?? "";
   const selectedPaymentStatus = params.payment_status ?? "all";
   const descriptionQuery = (params.q ?? "").trim().toLowerCase();
   const selectedSort = params.sort ?? "date_desc";
@@ -258,7 +261,8 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   const currentPage = Math.max(1, Number(params.page ?? 1) || 1);
   const filteredHistoryRows = shoppingHistory.rows
     .filter((row) => {
-      const matchesDate = !historyDate || filterDateValue(row.tanggal) === historyDate;
+      const rowDate = filterDateValue(row.tanggal);
+      const matchesDate = (!historyDateFrom || rowDate >= historyDateFrom) && (!historyDateTo || rowDate <= historyDateTo);
       const matchesCategory = selectedCategory === "all" || row.kategori === selectedCategory;
       const matchesDescription = !descriptionQuery || row.description.toLowerCase().includes(descriptionQuery);
       const matchesPaymentStatus =
@@ -277,7 +281,8 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   const paginatedHistoryRows = filteredHistoryRows.slice((activePage - 1) * pageSize, activePage * pageSize);
   const historyParams = new URLSearchParams();
   if (selectedStoreId) historyParams.set("store", selectedStoreId);
-  if (historyDate) historyParams.set("history_date", historyDate);
+  if (historyDateFrom) historyParams.set("history_date_from", historyDateFrom);
+  if (historyDateTo) historyParams.set("history_date_to", historyDateTo);
   if (selectedCategory !== "all") historyParams.set("category", selectedCategory);
   if (selectedPaymentStatus !== "all") historyParams.set("payment_status", selectedPaymentStatus);
   if (params.q) historyParams.set("q", params.q);
@@ -517,10 +522,13 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
         </div>
         <form className="filter-grid" style={{ marginBottom: 14 }}>
           {selectedStoreId ? <input name="store" type="hidden" value={selectedStoreId} /> : null}
-          <div className="field">
-            <label>Tanggal</label>
-            <input name="history_date" type="date" defaultValue={historyDate} />
-          </div>
+          <HistoryDateRangeField
+            defaultFrom={historyDateFrom}
+            defaultTo={historyDateTo}
+            label="Tanggal"
+            nameFrom="history_date_from"
+            nameTo="history_date_to"
+          />
           <div className="field">
             <label>Kategori</label>
             <select name="category" defaultValue={selectedCategory}>
