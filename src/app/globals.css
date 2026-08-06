@@ -2532,6 +2532,13 @@ th {
   width: 5px;
 }
 
+.overtime-note-text {
+  font-size: 0.75rem;
+  margin-top: 2px;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .dashboard-schedule-panel {
   margin-top: 18px;
 }
