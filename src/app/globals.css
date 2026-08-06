@@ -2532,6 +2532,13 @@ th {
   width: 5px;
 }
 
+.overtime-note-text {
+  font-size: 0.75rem;
+  margin-top: 2px;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .dashboard-schedule-panel {
   margin-top: 18px;
 }
@@ -3667,6 +3674,15 @@ th {
 
   .overtime-table td::before {
     content: none;
+  }
+
+  .overtime-table th:first-child,
+  .overtime-table td:first-child {
+    max-width: 90px;
+    min-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .overtime-table td:empty {

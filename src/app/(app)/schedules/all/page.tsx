@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Store, StoreStaffSchedule } from "@/lib/types";
 
-type SearchParams = Promise<{ month?: string }>;
+type SearchParams = Promise<{ month?: string; view?: string; week?: string }>;
 
 type StaffWithStore = Profile & {
   stores?: Store | null;
@@ -32,6 +32,48 @@ function getMonthDates(month: string) {
   return Array.from({ length: days }, (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`);
 }
 
+function calendarDate(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function addDays(dateValue: string, days: number) {
+  const date = calendarDate(dateValue);
+  date.setUTCDate(date.getUTCDate() + days);
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(date);
+}
+
+function getWeekGroups(month: string) {
+  const dates = getMonthDates(month);
+  const firstDate = calendarDate(dates[0]);
+  const firstDay = firstDate.getUTCDay();
+  const mondayOffset = firstDay === 0 ? -6 : 1 - firstDay;
+  const calendarStart = addDays(dates[0], mondayOffset);
+  const lastDate = calendarDate(dates[dates.length - 1]);
+  const lastDay = lastDate.getUTCDay();
+  const sundayOffset = lastDay === 0 ? 0 : 7 - lastDay;
+  const calendarEnd = addDays(dates[dates.length - 1], sundayOffset);
+  const groups: string[][] = [];
+  let cursor = calendarStart;
+  let currentWeek: string[] = [];
+
+  while (cursor <= calendarEnd) {
+    currentWeek.push(cursor);
+    if (currentWeek.length === 7) {
+      groups.push(currentWeek);
+      currentWeek = [];
+    }
+    cursor = addDays(cursor, 1);
+  }
+
+  return groups;
+}
+
 function dayName(date: string) {
   return new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", weekday: "short" }).format(new Date(`${date}T00:00:00+07:00`));
 }
@@ -58,13 +100,18 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
   const params = await searchParams;
   const selectedMonth = params.month ?? currentMonthJakarta();
   const monthDates = getMonthDates(selectedMonth);
-  const monthStart = monthDates[0];
-  const monthEnd = monthDates[monthDates.length - 1];
+  const viewMode = params.view === "week" ? "week" : "month";
+  const weekGroups = getWeekGroups(selectedMonth);
+  const selectedWeek = Math.min(Math.max(1, Number(params.week ?? 1) || 1), weekGroups.length || 1);
+  const weekDates = weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7);
+  const displayDates = viewMode === "week" ? weekDates : monthDates;
+  const queryStart = viewMode === "week" ? weekDates[0] : monthDates[0];
+  const queryEnd = viewMode === "week" ? weekDates[weekDates.length - 1] : monthDates[monthDates.length - 1];
 
   const [{ data: stores }, { data: staffRows }, { data: scheduleRows }] = await Promise.all([
     supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>(),
     supabase.from("profiles").select("*, stores(*)").eq("role", "staff").order("full_name").returns<StaffWithStore[]>(),
-    supabase.from("store_staff_schedules").select("*").gte("work_date", monthStart).lte("work_date", monthEnd).returns<StoreStaffSchedule[]>(),
+    supabase.from("store_staff_schedules").select("*").gte("work_date", queryStart).lte("work_date", queryEnd).returns<StoreStaffSchedule[]>(),
   ]);
 
   const scheduleMap = new Map((scheduleRows ?? []).map((schedule) => [`${schedule.staff_id}:${schedule.work_date}`, schedule]));
@@ -103,6 +150,25 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
             <label>Bulan</label>
             <input defaultValue={selectedMonth} name="month" type="month" />
           </div>
+          <div className="field">
+            <label>Tampilan</label>
+            <select defaultValue={viewMode} name="view">
+              <option value="month">Bulanan</option>
+              <option value="week">Mingguan</option>
+            </select>
+          </div>
+          {viewMode === "week" ? (
+            <div className="field">
+              <label>Minggu</label>
+              <select defaultValue={selectedWeek} name="week">
+                {weekGroups.map((groupDates, index) => (
+                  <option key={index + 1} value={index + 1}>
+                    Week {index + 1} ({groupDates[0]?.slice(8)}-{groupDates[groupDates.length - 1]?.slice(8)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <button className="button primary" type="submit">
             Tampilkan
           </button>
@@ -125,7 +191,7 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
               <thead>
                 <tr>
                   <th>Staff</th>
-                  {monthDates.map((date) => (
+                  {displayDates.map((date) => (
                     <th key={date}>
                       <div>{date.slice(8)}</div>
                       <div className="overtime-day-name">{dayName(date)}</div>
@@ -137,9 +203,17 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
                 {group.staff.map((staff) => (
                   <tr key={staff.id}>
                     <th>{capitalizeWords(staff.full_name)}</th>
-                    {monthDates.map((date) => {
+                    {displayDates.map((date) => {
                       const schedule = scheduleMap.get(`${staff.id}:${date}`);
                       const note = schedule?.notes?.trim();
+                      if (viewMode === "week") {
+                        return (
+                          <td className={note ? "overtime-cell-noted" : undefined} key={date}>
+                            <div>{schedule?.shift_code ?? "-"}</div>
+                            {note ? <div className="overtime-note-text muted">{note}</div> : null}
+                          </td>
+                        );
+                      }
                       return (
                         <td className={note ? "overtime-cell-noted" : undefined} key={date} title={note || undefined}>
                           {schedule?.shift_code ?? "-"}
