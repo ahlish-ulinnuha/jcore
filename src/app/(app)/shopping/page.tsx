@@ -187,8 +187,8 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   const selectedChartStore = profile.role === "admin" ? params.chart_store ?? "all" : selectedStoreId;
   const chartDateFrom = params.chart_date_from ?? monthStartJakarta();
   const chartDateTo = params.chart_date_to ?? todayJakarta();
-  const historyDateFrom = params.history_date_from ?? "";
-  const historyDateTo = params.history_date_to ?? "";
+  const historyDateFrom = params.history_date_from ?? monthStartJakarta();
+  const historyDateTo = params.history_date_to ?? todayJakarta();
   const selectedPaymentStatus = params.payment_status ?? "all";
   const descriptionQuery = (params.q ?? "").trim().toLowerCase();
   const selectedSort = params.sort ?? "date_desc";
