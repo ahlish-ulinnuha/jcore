@@ -3676,6 +3676,15 @@ th {
     content: none;
   }
 
+  .overtime-table th:first-child,
+  .overtime-table td:first-child {
+    max-width: 90px;
+    min-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .overtime-table td:empty {
     display: table-cell;
   }
