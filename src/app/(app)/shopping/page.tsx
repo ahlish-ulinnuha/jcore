@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, Store } from "@/lib/types";
+import type { Profile, ShoppingRecord, Store } from "@/lib/types";
 import { ShoppingDetailButton } from "./ShoppingDetailButton";
 import { ShoppingRecordForm } from "./ShoppingRecordForm";
 import { ShoppingSavedModal } from "./ShoppingSavedModal";
+import { deleteShoppingRecord } from "./actions";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -22,6 +23,7 @@ type SearchParams = Promise<{
   chart_payment?: string;
   chart_store?: string;
   category?: string;
+  deleted?: string;
   error?: string;
   history_date?: string;
   page?: string;
@@ -30,30 +32,26 @@ type SearchParams = Promise<{
   q?: string;
   saved?: string;
   sort?: string;
-  status?: string;
   store?: string;
 }>;
 
 type ShoppingSheetRow = {
-  command: string;
   description: string;
+  id: string;
   kategori: string;
   nominal: number;
   notes: string;
   paymentMethod: string;
   paymentStatus: string;
-  source: string;
   storeCode: string;
   storeId: string;
   storeName: string;
   tanggal: string;
 };
 
-function errorMessage(error?: string, status?: string) {
-  if (error === "missing-script-url") return "GOOGLE_APPS_SCRIPT_URL belum diisi di environment.";
+function errorMessage(error?: string) {
   if (error === "missing-store") return "Store belum dipilih atau belum terset di profile.";
-  if (error === "fetch-failed") return "Gagal menghubungi Google Apps Script. Cek URL Web App dan akses deployment Apps Script.";
-  if (error === "script-failed") return `Google Apps Script gagal menerima data${status ? ` (status ${status})` : ""}.`;
+  if (error === "save-failed") return "Belanja gagal disimpan. Silakan coba lagi.";
   return null;
 }
 
@@ -109,72 +107,6 @@ function dateSortValue(value: string) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-function fieldValue(row: Record<string, unknown>, keys: string[]) {
-  const normalizedEntries = Object.entries(row).map(([key, value]) => [key.toLowerCase(), value] as const);
-  for (const key of keys) {
-    const match = normalizedEntries.find(([entryKey]) => entryKey === key.toLowerCase());
-    if (match) return match[1];
-  }
-  return "";
-}
-
-function nestedDataValue(row: Record<string, unknown>, keys: string[]) {
-  const data = row.data;
-  if (!data || typeof data !== "object") return "";
-  return fieldValue(data as Record<string, unknown>, keys);
-}
-
-function normalizeSheetRows(rawRows: unknown): ShoppingSheetRow[] {
-  if (!Array.isArray(rawRows)) return [];
-
-  return rawRows
-    .map((row) => {
-      if (Array.isArray(row)) {
-        const hasPaymentStoreColumns = row.length >= 8;
-        const hasLegacyExtendedColumns = row.length >= 8 && !row[6] && !row[7];
-        return {
-          tanggal: String(row[0] ?? ""),
-          description: String(row[1] ?? ""),
-          nominal: Number(row[2] ?? 0),
-          kategori: String(row[3] ?? ""),
-          paymentMethod: hasPaymentStoreColumns ? String(row[4] ?? "") : "",
-          paymentStatus: "",
-          notes: "",
-          source: hasPaymentStoreColumns ? String(row[6] ?? "") : String(row[4] ?? ""),
-          command: hasPaymentStoreColumns ? String(row[7] ?? "") : String(row[5] ?? ""),
-          storeCode: hasPaymentStoreColumns ? String(row[5] ?? "") : "",
-          storeId: "",
-          storeName: hasLegacyExtendedColumns ? String(row[10] ?? "") : hasPaymentStoreColumns ? String(row[5] ?? "") : "",
-        };
-      }
-
-      if (row && typeof row === "object") {
-        const record = row as Record<string, unknown>;
-        return {
-          tanggal: String(fieldValue(record, ["tanggal", "date", "created_at"]) ?? ""),
-          description: String(fieldValue(record, ["deskripsi", "description"]) ?? ""),
-          nominal: Number(fieldValue(record, ["nominal", "amount", "total"]) ?? 0),
-          kategori: String(fieldValue(record, ["kategori", "category"]) ?? ""),
-          paymentMethod: String(fieldValue(record, ["metode pembayaran", "payment_method", "paymentMethod", "payment"]) ?? ""),
-          paymentStatus: String(
-            fieldValue(record, ["status pembayaran", "status_pembayaran", "payment_status", "paymentStatus", "status bayar"]) ||
-              nestedDataValue(record, ["payment_status", "paymentStatus"]) ||
-              "",
-          ),
-          notes: String(fieldValue(record, ["catatan", "notes", "note"]) ?? ""),
-          source: String(fieldValue(record, ["sumber", "source"]) ?? ""),
-          command: String(fieldValue(record, ["command", "text"]) ?? ""),
-          storeCode: String(fieldValue(record, ["store_code", "storeCode", "kode store", "kode toko"]) || nestedDataValue(record, ["store_code", "storeCode"]) || ""),
-          storeId: String(fieldValue(record, ["store_id", "storeId"]) || nestedDataValue(record, ["store_id", "storeId"]) || ""),
-          storeName: String(fieldValue(record, ["store_name", "storeName", "store", "toko"]) || nestedDataValue(record, ["store_name", "storeName"]) || ""),
-        };
-      }
-
-      return null;
-    })
-    .filter((row): row is ShoppingSheetRow => Boolean(row && (row.description || row.nominal || row.kategori)));
-}
-
 function monthStartJakarta() {
   return `${todayJakarta().slice(0, 7)}-01`;
 }
@@ -195,31 +127,33 @@ function isPaymentStatusPaid(value: string) {
   return normalized === "paid" || normalized === "lunas" || normalized === "sudah_lunas" || normalized === "sudah dibayar";
 }
 
-async function fetchShoppingRows() {
-  const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
-  if (!scriptUrl) return { error: "GOOGLE_APPS_SCRIPT_URL belum diisi.", rows: [] as ShoppingSheetRow[] };
+async function fetchShoppingRows(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data, error } = await supabase
+    .from("shopping_records")
+    .select("*")
+    .order("record_date", { ascending: false })
+    .limit(1000)
+    .returns<ShoppingRecord[]>();
 
-  const url = new URL(scriptUrl);
-  url.searchParams.set("action", "list_shopping_records");
-  url.searchParams.set("limit", "500");
-  const token = process.env.GOOGLE_APPS_SCRIPT_TOKEN ?? "";
-  if (token) url.searchParams.set("token", token);
-
-  try {
-    const response = await fetch(url, { cache: "no-store", redirect: "follow" });
-    const text = await response.text();
-    if (!response.ok) {
-      return { error: `Google Apps Script gagal mengambil list belanja (${response.status}).`, rows: [] as ShoppingSheetRow[] };
-    }
-
-    const json = JSON.parse(text) as Record<string, unknown>;
-    const rawRows = json.records ?? json.rows ?? json.data ?? json.values;
-    const rows = normalizeSheetRows(rawRows);
-    const error = rows.length === 0 ? "Belum ada data list dari Apps Script. Pastikan doGet mendukung action list_shopping_records." : null;
-    return { error, rows };
-  } catch {
-    return { error: "Gagal membaca list belanja dari Google Apps Script.", rows: [] as ShoppingSheetRow[] };
+  if (error) {
+    return { error: "Gagal mengambil data belanja.", rows: [] as ShoppingSheetRow[] };
   }
+
+  const rows: ShoppingSheetRow[] = (data ?? []).map((record) => ({
+    description: record.description,
+    id: record.id,
+    kategori: record.category,
+    nominal: Number(record.total_price),
+    notes: record.notes ?? "",
+    paymentMethod: record.payment_method,
+    paymentStatus: record.payment_status,
+    storeCode: record.store_code ?? "",
+    storeId: record.store_id,
+    storeName: record.store_name,
+    tanggal: record.record_date,
+  }));
+
+  return { error: null as string | null, rows };
 }
 
 export default async function ShoppingRecordPage({ searchParams }: { searchParams: SearchParams }) {
@@ -237,10 +171,10 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
     profile.role === "admin"
       ? supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>()
       : Promise.resolve({ data: [] as Store[] }),
-    fetchShoppingRows(),
+    fetchShoppingRows(supabase),
   ]);
   const selectedStoreId = profile.role === "admin" ? params.store ?? stores?.[0]?.id ?? "" : profile.store_id ?? "";
-  const error = errorMessage(params.error, params.status);
+  const error = errorMessage(params.error);
   const pageSizeOptions = [10, 20, 50, 100, 500];
   const requestedPageSize = Number(params.page_size ?? 10);
   const pageSize = pageSizeOptions.includes(requestedPageSize) ? requestedPageSize : 10;
@@ -364,7 +298,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
         <div>
           <p className="eyebrow">Pencatatan belanja</p>
           <h1>Input belanja harian</h1>
-          <p className="muted">Input belanja akan dikirim ke Google Sheet, lalu history dibaca kembali dari Sheet1.</p>
+          <p className="muted">Input dan history belanja tersimpan langsung di database.</p>
         </div>
       </div>
 
@@ -372,6 +306,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
         <ShoppingSavedModal />
       </Suspense>
       {error ? <div className="toast delete">{error}</div> : null}
+      {params.deleted === "1" ? <div className="toast delete">Belanja berhasil dihapus.</div> : null}
 
       <section className="panel shopping-panel">
         <ShoppingRecordForm
@@ -574,7 +509,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
       <section className="panel shopping-history-panel">
         <div className="page-head compact">
           <div>
-            <p className="eyebrow">History Google Sheet</p>
+            <p className="eyebrow">History</p>
             <h2>List belanja terakhir</h2>
           </div>
         </div>
@@ -650,11 +585,12 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                   <th>Metode</th>
                   <th>Status</th>
                   <th>Detail</th>
+                  {profile.role === "admin" ? <th>Aksi</th> : null}
                 </tr>
               </thead>
               <tbody>
-                {paginatedHistoryRows.map((row, index) => (
-                  <tr key={`${row.tanggal}-${row.description}-${index}`}>
+                {paginatedHistoryRows.map((row) => (
+                  <tr key={row.id}>
                     <td>{formatDisplayDate(row.tanggal)}</td>
                     <td>{row.description || "-"}</td>
                     <td>{formatRupiah(row.nominal)}</td>
@@ -668,6 +604,16 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                     <td>
                       <ShoppingDetailButton notes={row.notes} paymentMethod={row.paymentMethod} paymentStatus={row.paymentStatus} />
                     </td>
+                    {profile.role === "admin" ? (
+                      <td>
+                        <form action={deleteShoppingRecord}>
+                          <input name="id" type="hidden" value={row.id} />
+                          <button className="button danger" type="submit">
+                            Hapus
+                          </button>
+                        </form>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

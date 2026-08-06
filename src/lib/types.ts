@@ -282,6 +282,23 @@ export type DailySalesReport = {
   updated_at: string;
 };
 
+export type ShoppingRecord = {
+  id: string;
+  record_date: string;
+  store_id: string;
+  store_name: string;
+  store_code: string | null;
+  description: string;
+  total_price: number;
+  category: string;
+  payment_method: string;
+  payment_status: "paid" | "unpaid";
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ActivityLog = {
   id: string;
   entity_type: string;
