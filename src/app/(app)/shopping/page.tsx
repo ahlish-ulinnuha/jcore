@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ShoppingRecord, Store } from "@/lib/types";
+import { ImportShoppingButton } from "./ImportShoppingButton";
 import { ShoppingDetailButton } from "./ShoppingDetailButton";
 import { ShoppingRecordForm } from "./ShoppingRecordForm";
 import { ShoppingSavedModal } from "./ShoppingSavedModal";
@@ -512,6 +513,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
             <p className="eyebrow">History</p>
             <h2>List belanja terakhir</h2>
           </div>
+          {profile.role === "admin" ? <ImportShoppingButton /> : null}
         </div>
         <form className="filter-grid" style={{ marginBottom: 14 }}>
           {selectedStoreId ? <input name="store" type="hidden" value={selectedStoreId} /> : null}
