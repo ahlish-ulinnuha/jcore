@@ -7,7 +7,7 @@ import { ImportShoppingButton } from "./ImportShoppingButton";
 import { ShoppingDetailButton } from "./ShoppingDetailButton";
 import { ShoppingRecordForm } from "./ShoppingRecordForm";
 import { ShoppingSavedModal } from "./ShoppingSavedModal";
-import { deleteShoppingRecord, updateShoppingPaymentStatus } from "./actions";
+import { deleteShoppingRecord } from "./actions";
 
 function todayJakarta() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -627,13 +627,6 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                           <a className="button outline" href={`/shopping?${new URLSearchParams({ ...Object.fromEntries(historyParams), edit: row.id })}`}>
                             Edit
                           </a>
-                          <form action={updateShoppingPaymentStatus}>
-                            <input name="id" type="hidden" value={row.id} />
-                            <input name="status" type="hidden" value={isPaymentStatusPaid(row.paymentStatus) ? "unpaid" : "paid"} />
-                            <button className="button outline" type="submit">
-                              {isPaymentStatusPaid(row.paymentStatus) ? "Tandai Unpaid" : "Tandai Paid"}
-                            </button>
-                          </form>
                           <form action={deleteShoppingRecord}>
                             <input name="id" type="hidden" value={row.id} />
                             <button className="button danger" type="submit">

@@ -74,25 +74,6 @@ export async function saveShoppingRecord(formData: FormData) {
   redirect(`/shopping?${redirectParams}`);
 }
 
-export async function updateShoppingPaymentStatus(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
-  if (!profile || profile.role !== "admin") redirect("/dashboard");
-
-  const id = text(formData, "id");
-  const status = text(formData, "status");
-  if (id && (status === "paid" || status === "unpaid")) {
-    await supabase.from("shopping_records").update({ payment_status: status }).eq("id", id);
-  }
-
-  revalidatePath("/shopping");
-}
-
 type SheetImportRow = {
   description: string;
   kategori: string;
