@@ -26,6 +26,7 @@ type SearchParams = Promise<{
   chart_store?: string;
   category?: string;
   deleted?: string;
+  edit?: string;
   error?: string;
   history_date_from?: string;
   history_date_to?: string;
@@ -170,11 +171,15 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
   if (!profile || profile.role === "vendor") redirect("/dashboard");
 
   const params = await searchParams;
-  const [{ data: stores }, shoppingHistory] = await Promise.all([
+  const editId = profile.role === "admin" ? params.edit ?? "" : "";
+  const [{ data: stores }, shoppingHistory, { data: editingRecord }] = await Promise.all([
     profile.role === "admin"
       ? supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>()
       : Promise.resolve({ data: [] as Store[] }),
     fetchShoppingRows(supabase),
+    editId
+      ? supabase.from("shopping_records").select("*").eq("id", editId).maybeSingle<ShoppingRecord>()
+      : Promise.resolve({ data: null as ShoppingRecord | null }),
   ]);
   const selectedStoreId = profile.role === "admin" ? params.store ?? stores?.[0]?.id ?? "" : profile.store_id ?? "";
   const error = errorMessage(params.error);
@@ -317,9 +322,11 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
       <section className="panel shopping-panel">
         <ShoppingRecordForm
           categoryOptions={categoryOptions}
+          editingRecord={editingRecord}
+          key={editingRecord?.id ?? "new"}
           profile={profile}
-          recordDate={todayJakarta()}
-          selectedStoreId={selectedStoreId}
+          recordDate={editingRecord?.record_date ?? todayJakarta()}
+          selectedStoreId={editingRecord?.store_id ?? selectedStoreId}
           stores={stores ?? []}
         />
       </section>
@@ -616,12 +623,17 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                     </td>
                     {profile.role === "admin" ? (
                       <td>
-                        <form action={deleteShoppingRecord}>
-                          <input name="id" type="hidden" value={row.id} />
-                          <button className="button danger" type="submit">
-                            Hapus
-                          </button>
-                        </form>
+                        <div className="row-actions compact-actions">
+                          <a className="button outline" href={`/shopping?${new URLSearchParams({ ...Object.fromEntries(historyParams), edit: row.id })}`}>
+                            Edit
+                          </a>
+                          <form action={deleteShoppingRecord}>
+                            <input name="id" type="hidden" value={row.id} />
+                            <button className="button danger" type="submit">
+                              Hapus
+                            </button>
+                          </form>
+                        </div>
                       </td>
                     ) : null}
                   </tr>

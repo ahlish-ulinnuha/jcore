@@ -28,6 +28,9 @@ export async function saveShoppingRecord(formData: FormData) {
   const { data: profile } = await supabase.from("profiles").select("*, stores(*)").eq("id", user.id).single<Profile>();
   if (!profile || profile.role === "vendor") redirect("/dashboard");
 
+  const editId = text(formData, "id");
+  if (editId && profile.role !== "admin") redirect("/dashboard");
+
   const selectedStoreId = profile.role === "admin" ? text(formData, "store_id") : profile.store_id ?? "";
   if (!selectedStoreId) redirect("/shopping?error=missing-store");
 
@@ -39,13 +42,12 @@ export async function saveShoppingRecord(formData: FormData) {
   const category = text(formData, "category") || "belanja";
   const notes = text(formData, "notes");
   const paymentMethod = text(formData, "payment_method") || "cash";
-  const paymentStatus = text(formData, "payment_status") || "unpaid";
+  const paymentStatus = text(formData, "payment_status") || "paid";
   const recordDate = text(formData, "record_date");
   if (!recordDate || !description) redirect("/shopping?error=missing-store");
 
-  const { error: insertError } = await supabase.from("shopping_records").insert({
+  const payload = {
     category,
-    created_by: user.id,
     description,
     notes: notes || null,
     payment_method: paymentMethod,
@@ -55,9 +57,13 @@ export async function saveShoppingRecord(formData: FormData) {
     store_id: store.id,
     store_name: store.name,
     total_price: totalPrice,
-  });
+  };
 
-  if (insertError) {
+  const { error: saveError } = editId
+    ? await supabase.from("shopping_records").update(payload).eq("id", editId)
+    : await supabase.from("shopping_records").insert({ ...payload, created_by: user.id });
+
+  if (saveError) {
     redirect(`/shopping?error=save-failed`);
   }
 
