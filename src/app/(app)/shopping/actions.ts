@@ -42,7 +42,7 @@ export async function saveShoppingRecord(formData: FormData) {
   const category = text(formData, "category") || "belanja";
   const notes = text(formData, "notes");
   const paymentMethod = text(formData, "payment_method") || "cash";
-  const paymentStatus = text(formData, "payment_status") || "unpaid";
+  const paymentStatus = text(formData, "payment_status") || "paid";
   const recordDate = text(formData, "record_date");
   if (!recordDate || !description) redirect("/shopping?error=missing-store");
 

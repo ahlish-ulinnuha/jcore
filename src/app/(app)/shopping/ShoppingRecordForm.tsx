@@ -113,7 +113,7 @@ export function ShoppingRecordForm({
       </div>
       <div className="field">
         <label>Status Pembayaran</label>
-        <select defaultValue={editingRecord?.payment_status ?? "unpaid"} name="payment_status">
+        <select defaultValue={editingRecord?.payment_status ?? "paid"} name="payment_status">
           <option value="unpaid">Unpaid</option>
           <option value="paid">Paid</option>
         </select>
