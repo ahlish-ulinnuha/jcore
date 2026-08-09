@@ -3779,6 +3779,15 @@ th {
     content: none;
   }
 
+  .schedule-table th:first-child {
+    min-width: 50px;
+    width: 50px;
+  }
+
+  .schedule-table tbody th span {
+    max-width: 50px;
+  }
+
   .shopping-total-card {
     align-items: flex-start;
     flex-direction: column;
