@@ -30,7 +30,7 @@ const operationalMenu = [
 
 // Capability-only keys: not real pages, just permission toggles for features inside other pages.
 // Must be excluded from nav rendering since their href isn't a navigable route.
-const hiddenCapabilityKeys = ["send_vendor_message"];
+const hiddenCapabilityKeys = ["send_vendor_message", "input_schedule", "input_schedule_all_store"];
 
 export function NavLinks({ allowedMenuKeys, role }: { allowedMenuKeys: string[]; role: Role }) {
   const pathname = usePathname();

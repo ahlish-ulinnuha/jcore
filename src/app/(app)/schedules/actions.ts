@@ -41,6 +41,31 @@ async function requireStaffOrAdmin() {
   return { profile, supabase, user };
 }
 
+export async function requireScheduleInputAccess() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
+  if (!profile || profile.role === "vendor") redirect("/dashboard");
+
+  if (profile.role === "admin") return { canPickAnyStore: true, profile, supabase, user };
+
+  const { data: menuAccessRows } = await supabase
+    .from("profile_menu_access")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .returns<ProfileMenuAccess[]>();
+  const allowedMenuKeys = allowedMenuKeysForRole(profile.role, menuAccessRows ?? []);
+  const canPickAnyStore = hasMenuAccess("input_schedule_all_store", allowedMenuKeys);
+  const canInputOwnStore = hasMenuAccess("input_schedule", allowedMenuKeys);
+  if (!canPickAnyStore && !canInputOwnStore) redirect("/dashboard");
+
+  return { canPickAnyStore, profile, supabase, user };
+}
+
 export async function requireScheduleRequestApprover() {
   const supabase = await createClient();
   const {
@@ -96,7 +121,7 @@ async function getOrCreateScheduleMonth(
 }
 
 export async function saveMonthlySchedule(formData: FormData) {
-  const { supabase, user } = await requireAdmin();
+  const { canPickAnyStore, profile, supabase, user } = await requireScheduleInputAccess();
   const storeId = text(formData, "store_id");
   const scheduleMonth = text(formData, "schedule_month");
   const intent = text(formData, "intent");
@@ -105,6 +130,7 @@ export async function saveMonthlySchedule(formData: FormData) {
   const dates = values(formData, "work_date");
 
   if (!storeId || !scheduleMonth) redirect("/schedules?error=missing-filter");
+  if (!canPickAnyStore && storeId !== profile.store_id) redirect("/dashboard");
 
   const schedule = await getOrCreateScheduleMonth(supabase, storeId, scheduleMonth, user.id);
   const upserts: Record<string, unknown>[] = [];

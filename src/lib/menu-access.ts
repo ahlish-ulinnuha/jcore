@@ -15,6 +15,8 @@ export const mainMenuItems = [
   { href: "/admin/vendor", key: "admin_vendor", label: "Vendor", roles: ["admin"] },
   { href: "/vendor", key: "vendor_portal", label: "Vendor", roles: ["vendor"] },
   { href: "/capabilities/send_vendor_message", key: "send_vendor_message", label: "Kirim Pesan Vendor (WhatsApp)", roles: ["admin"] },
+  { href: "/capabilities/input_schedule", key: "input_schedule", label: "Input Schedule (Toko Sendiri)", roles: ["admin"] },
+  { href: "/capabilities/input_schedule_all_store", key: "input_schedule_all_store", label: "Input Schedule (Semua Store)", roles: ["admin"] },
 ] as const;
 
 export const masterMenuItems = [
