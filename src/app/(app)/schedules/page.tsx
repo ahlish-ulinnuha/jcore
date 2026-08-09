@@ -279,10 +279,11 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   const historyRangeFrom = (historyPage - 1) * historyPageSize;
   const historyRangeTo = historyRangeFrom + historyPageSize - 1;
 
-  const [{ data: stores }, { data: shiftTypes }] = await Promise.all([
+  const [{ data: allStores }, { data: shiftTypes }] = await Promise.all([
     supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>(),
     supabase.from("shift_types").select("*").eq("is_active", true).order("sort_order").returns<ShiftType[]>(),
   ]);
+  const stores = (allStores ?? []).filter((store) => store.name.trim().toLowerCase() !== "all store");
 
   const selectedStoreId = profile.role === "staff" ? profile.store_id ?? "" : params.store ?? stores?.[0]?.id ?? "";
   const { data: staffRows } = selectedStoreId
