@@ -118,6 +118,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
   const shiftTypesQuery = staffStoreId
     ? supabase.from("shift_types").select("*").eq("is_active", true).order("sort_order").returns<ShiftType[]>()
     : null;
+  const scheduleMonthsInRange = Array.from(new Set([currentWeekDates[0].slice(0, 7), currentWeekDates[currentWeekDates.length - 1].slice(0, 7)])).map(
+    (month) => `${month}-01`,
+  );
+  const scheduleMonthsQuery = staffStoreId
+    ? supabase.from("store_schedule_months").select("schedule_month, status").eq("store_id", staffStoreId).in("schedule_month", scheduleMonthsInRange)
+    : null;
   const openAttendanceQuery =
     profile.role === "staff"
       ? supabase.from("staff_attendance").select("*").eq("staff_id", profile.id).is("check_out_at", null).maybeSingle<StaffAttendance>()
@@ -145,6 +151,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     { count: unavailableCount },
     scheduleResult,
     shiftTypeResult,
+    scheduleMonthsResult,
     openAttendanceResult,
     todayAttendanceCountResult,
     openAttendanceCountResult,
@@ -154,13 +161,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     unavailableQuery,
     scheduleQuery ?? Promise.resolve({ data: [] as StoreStaffSchedule[] }),
     shiftTypesQuery ?? Promise.resolve({ data: [] as ShiftType[] }),
+    scheduleMonthsQuery ?? Promise.resolve({ data: [] as { schedule_month: string; status: string }[] }),
     openAttendanceQuery ?? Promise.resolve({ data: null as StaffAttendance | null }),
     todayAttendanceCountQuery ?? Promise.resolve({ count: 0 }),
     openAttendanceCountQuery ?? Promise.resolve({ count: 0 }),
   ]);
 
   const requestRows = requests ?? [];
-  const scheduleMap = new Map((scheduleResult.data ?? []).map((schedule) => [schedule.work_date, schedule]));
+  const approvedScheduleMonths = new Set(
+    (scheduleMonthsResult.data ?? []).filter((month) => month.status === "approved").map((month) => month.schedule_month.slice(0, 7)),
+  );
+  const scheduleMap = new Map(
+    (scheduleResult.data ?? [])
+      .filter((schedule) => approvedScheduleMonths.has(schedule.work_date.slice(0, 7)))
+      .map((schedule) => [schedule.work_date, schedule]),
+  );
   const shiftMap = new Map((shiftTypeResult.data ?? []).map((shift) => [shift.code, shift]));
   const scheduleError = "error" in scheduleResult ? scheduleResult.error : null;
   const openAttendance = openAttendanceResult.data;
