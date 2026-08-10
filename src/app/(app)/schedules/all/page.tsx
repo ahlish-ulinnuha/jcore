@@ -108,13 +108,22 @@ export default async function AllSchedulesPage({ searchParams }: { searchParams:
   const queryStart = viewMode === "week" ? weekDates[0] : monthDates[0];
   const queryEnd = viewMode === "week" ? weekDates[weekDates.length - 1] : monthDates[monthDates.length - 1];
 
-  const [{ data: stores }, { data: staffRows }, { data: scheduleRows }] = await Promise.all([
+  const monthsInRange = Array.from(new Set([queryStart.slice(0, 7), queryEnd.slice(0, 7)])).map((month) => `${month}-01`);
+
+  const [{ data: stores }, { data: staffRows }, { data: scheduleRows }, { data: scheduleMonths }] = await Promise.all([
     supabase.from("stores").select("*").eq("is_active", true).order("name").returns<Store[]>(),
     supabase.from("profiles").select("*, stores(*)").eq("role", "staff").order("full_name").returns<StaffWithStore[]>(),
     supabase.from("store_staff_schedules").select("*").gte("work_date", queryStart).lte("work_date", queryEnd).returns<StoreStaffSchedule[]>(),
+    supabase.from("store_schedule_months").select("store_id, schedule_month, status").in("schedule_month", monthsInRange),
   ]);
 
-  const scheduleMap = new Map((scheduleRows ?? []).map((schedule) => [`${schedule.staff_id}:${schedule.work_date}`, schedule]));
+  const approvedMonths = new Set(
+    (scheduleMonths ?? []).filter((month) => month.status === "approved").map((month) => `${month.store_id}:${month.schedule_month.slice(0, 7)}`),
+  );
+  const visibleScheduleRows =
+    profile.role === "admin" ? scheduleRows ?? [] : (scheduleRows ?? []).filter((schedule) => approvedMonths.has(`${schedule.store_id}:${schedule.work_date.slice(0, 7)}`));
+
+  const scheduleMap = new Map(visibleScheduleRows.map((schedule) => [`${schedule.staff_id}:${schedule.work_date}`, schedule]));
 
   const staffByStore = new Map<string, StaffWithStore[]>();
   for (const staff of staffRows ?? []) {
