@@ -9,7 +9,7 @@ export const mainMenuItems = [
   { href: "/shopping", key: "shopping", label: "Belanja", roles: ["admin", "staff"] },
   { href: "/attendance", key: "attendance", label: "Absensi", roles: ["admin", "staff"] },
   { href: "/schedules", key: "schedules", label: "Schedule", roles: ["admin", "staff"] },
-  { href: "/schedules/input", key: "input_schedule", label: "Input Schedule", roles: ["admin"] },
+  { href: "/schedules/input", key: "input_schedule", label: "Input Schedule", roles: ["staff"] },
   { href: "/schedules/all", key: "all_schedules", label: "All Schedule", roles: ["admin"] },
   { href: "/schedules/requests", key: "schedule_requests", label: "Request Schedule", roles: ["admin"] },
   { href: "/overtime-summary", key: "overtime_summary", label: "Overtime Summary", roles: ["admin"] },
