@@ -9,6 +9,7 @@ import type { Role } from "@/lib/types";
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
   if (href === "/requests/new") return pathname.startsWith("/requests");
+  if (href === "/schedules") return pathname === href;
   return pathname.startsWith(href);
 }
 
