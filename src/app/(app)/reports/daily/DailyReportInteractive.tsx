@@ -38,10 +38,6 @@ type SpiceSummaryRow = {
   whiteSpiceStock: number;
 };
 
-function shouldShowStoreNames(vendorName: string) {
-  return vendorName.trim().toUpperCase() !== "NR";
-}
-
 function statusLabel(status: PurchaseRequestItem["status"]) {
   if (status === "fulfilled") return "Fulfilled";
   if (status === "unavailable") return "Unavailable";
@@ -162,7 +158,7 @@ export function DailyReportInteractive({
                       {vendor.rows.map((row) => (
                         <tr key={row.rowKey}>
                           <td>{row.productName}</td>
-                          <td>{shouldShowStoreNames(row.vendorName) ? [...row.storeNames].sort().join(", ") : "-"}</td>
+                          <td>{row.storeNames.length > 0 ? [...row.storeNames].sort().join(", ") : "-"}</td>
                           {isAdmin ? <td>{row.itemNotes.length > 0 ? row.itemNotes.join("; ") : "-"}</td> : null}
                           <td>{row.qty}</td>
                           <td>
