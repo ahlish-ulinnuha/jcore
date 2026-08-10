@@ -596,8 +596,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
             </div>
 
             <div className="row-actions schedule-actions">
-              <ScheduleSubmitButton className="button outline" idleText="Simpan Draft" name="intent" pendingText="Sedang menyimpan..." value="draft" />
-              <ScheduleSubmitButton idleText="Submit Approval" name="intent" pendingText="Sedang submit..." value="submit" />
+              <ScheduleSubmitButton idleText="Submit" name="intent" pendingText="Sedang submit..." value="submit" />
             </div>
           </form>
         ) : (
