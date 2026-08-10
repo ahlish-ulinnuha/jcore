@@ -52,6 +52,17 @@ export function NavigationLoading() {
     return () => document.removeEventListener("click", onClick);
   }, [currentUrl, router]);
 
+  useEffect(() => {
+    const onSubmit = (event: SubmitEvent) => {
+      const form = event.target as HTMLFormElement | null;
+      if (!form || form.method.toLowerCase() !== "get") return;
+      setLoading(true);
+    };
+
+    document.addEventListener("submit", onSubmit);
+    return () => document.removeEventListener("submit", onSubmit);
+  }, []);
+
   return (
     <>
       {loading ? (
