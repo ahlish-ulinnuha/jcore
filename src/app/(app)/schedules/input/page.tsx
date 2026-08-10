@@ -331,9 +331,18 @@ export default async function InputSchedulePage({ searchParams }: { searchParams
             </div>
 
             <div className="row-actions schedule-actions">
-              <ScheduleSubmitButton className="button outline" idleText="Simpan Draft" name="intent" pendingText="Sedang menyimpan..." value="draft" />
-              <ScheduleSubmitButton idleText="Submit Approval" name="intent" pendingText="Sedang submit..." value="submit" />
+              {profile.role === "admin" ? (
+                <>
+                  <ScheduleSubmitButton className="button outline" idleText="Simpan Draft" name="intent" pendingText="Sedang menyimpan..." value="draft" />
+                  <ScheduleSubmitButton idleText="Submit Approval" name="intent" pendingText="Sedang submit..." value="submit" />
+                </>
+              ) : (
+                <ScheduleSubmitButton idleText="Submit" name="intent" pendingText="Sedang submit..." value="submit" />
+              )}
             </div>
+            {profile.role !== "admin" ? (
+              <p className="muted">Schedule akan menunggu approval admin dan belum terlihat oleh staff lain sampai disetujui.</p>
+            ) : null}
           </form>
         ) : (
           <div className="alert">Belum ada staff aktif di store ini. Set store user staff terlebih dahulu di Master Data User.</div>
