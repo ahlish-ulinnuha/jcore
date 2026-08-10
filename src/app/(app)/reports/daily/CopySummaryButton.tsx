@@ -69,7 +69,8 @@ export function CopySummaryButton({
             const storeNames = shouldShowStoreNames(row.vendorName) ? [...(row.storeNames ?? [])].sort().join(" ") : "";
             const productName = storeNames ? `${row.productName} ${storeNames}` : row.productName;
             const unit = row.unit?.trim();
-            return `- ${productName} / ${row.qty}${unit ? ` ${unit}` : ""}`;
+            const note = row.note?.trim();
+            return `- ${productName} / ${row.qty}${unit ? ` ${unit}` : ""}${note ? ` - ${note}` : ""}`;
           });
         return [`Request ${groupName}`, ...lines].join("\n");
       });
@@ -84,11 +85,7 @@ export function CopySummaryButton({
           ...(includeAllStoreTotal ? [`- All store: merah ${formatQty(totalRedSpice)}, putih ${formatQty(totalWhiteSpice)}`] : []),
         ].join("\n")
       : "";
-    const notedRows = rows.filter((row) => row.note?.trim());
-    const noteSection = notedRows.length
-      ? ["Catatan", ...notedRows.map((row) => `- ${row.productName}: ${row.note?.trim()}`)].join("\n")
-      : "";
-    const allSections = [...sections, spiceSection, noteSection].filter(Boolean);
+    const allSections = [...sections, spiceSection].filter(Boolean);
     return [`*_📋✨ Summary Request ${formatDate(activeDate)}_*`, `Outlet: ${outletName}`, ...allSections].join("\n------------------------------ \n");
   }
 
