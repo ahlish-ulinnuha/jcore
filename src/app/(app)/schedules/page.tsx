@@ -520,6 +520,10 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
           ) : null}
         </div>
 
+        {profile.role === "staff" && scheduleMonth && scheduleMonth.status !== "approved" ? (
+          <p className="muted">Schedule bulan ini sudah diinput tapi masih menunggu approval admin.</p>
+        ) : null}
+
         {staffRows?.length && profile.role === "admin" ? (
           <form action={saveMonthlySchedule}>
             <input name="store_id" type="hidden" value={selectedStoreId} />
@@ -606,7 +610,8 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
                     {completeWeekDates(weekDates).map((date) => {
                       const meta = dayMeta(date);
                       const readonlyLabel = outsideMonthLabel(date, selectedMonth);
-                      const value = scheduleMap.get(`${profile.id}:${date}`);
+                      const isApprovedMonth = date.slice(0, 7) === selectedMonth ? scheduleMonth?.status === "approved" : true;
+                      const value = isApprovedMonth ? scheduleMap.get(`${profile.id}:${date}`) : undefined;
                       return (
                         <div className={[meta.className, readonlyLabel ? "readonly-info" : "", "staff-calendar-day"].filter(Boolean).join(" ")} key={date} title={meta.holidayName ?? undefined}>
                           <span>{dayLabel(date)}</span>
