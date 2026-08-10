@@ -8,6 +8,7 @@ type SummaryRow = {
   note?: string;
   productName: string;
   qty: number;
+  rawLine?: string;
   storeNames?: string[];
   unit?: string;
   vendorName: string;
@@ -69,6 +70,7 @@ export function CopySummaryButton({
         const lines = groupRows
           .sort((a, b) => a.productName.localeCompare(b.productName))
           .map((row) => {
+            if (row.rawLine) return `- ${row.rawLine}`;
             const storeNames = shouldShowStoreNames(row.vendorName) ? [...(row.storeNames ?? [])].sort().join(" ") : "";
             const productName = storeNames ? `${row.productName} ${storeNames}` : row.productName;
             const unit = row.unit?.trim();
@@ -86,8 +88,9 @@ export function CopySummaryButton({
       const requestRed = row.requestRed?.trim();
       const requestWhite = row.requestWhite?.trim();
       if (!requestRed && !requestWhite) return [stockLine];
+      if (row.ambilDariJG2) return [stockLine];
       const requestParts = [requestRed ? `merah ${requestRed}` : "", requestWhite ? `putih ${requestWhite}` : ""].filter(Boolean).join(", ");
-      const requestLine = `  Request: ${requestParts}${row.ambilDariJG2 ? " (ambil dari JG2)" : ""}`;
+      const requestLine = `  Request: ${requestParts}`;
       return [stockLine, requestLine];
     });
     const spiceSection = sortedSpiceRows.length

@@ -137,6 +137,24 @@ export function DailyReportInteractive({
     ),
   );
 
+  const spiceJ2Rows = spiceRows.flatMap((row) => {
+    const request = spiceRequests[row.storeName];
+    if (!request?.ambilDariJG2) return [];
+    const requestRed = request.requestRed?.trim();
+    const requestWhite = request.requestWhite?.trim();
+    if (!requestRed && !requestWhite) return [];
+    const requestParts = [requestRed ? `merah ${requestRed}` : "", requestWhite ? `putih ${requestWhite}` : ""].filter(Boolean).join(", ");
+    return [
+      {
+        groupOverride: "ambil dari J2",
+        productName: `Bumbu ${row.storeName}`,
+        qty: 0,
+        rawLine: `Bumbu ${row.storeName} / ${requestParts}`,
+        vendorName: "Bumbu",
+      },
+    ];
+  });
+
   const enrichedSpiceRows = spiceRows.map((row) => {
     const request = spiceRequests[row.storeName];
     return {
@@ -154,7 +172,7 @@ export function DailyReportInteractive({
           date={date}
           includeAllStoreTotal={includeAllStoreTotal}
           outletName={outletName}
-          rows={summaryRows}
+          rows={[...summaryRows, ...spiceJ2Rows]}
           spiceRows={enrichedSpiceRows}
         />
       </div>
