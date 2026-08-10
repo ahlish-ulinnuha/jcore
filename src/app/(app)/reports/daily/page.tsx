@@ -114,7 +114,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
 
   const params = await searchParams;
   const date = params.date ?? todayJakarta();
-  const spiceReportDate = todayJakarta();
+  const spiceReportDate = date;
   const selectedVendor = params.vendor ?? "all";
   const selectedStatus = params.status ?? "all";
   const selectedRequestStatus = profile.role === "admin" ? params.request_status ?? "submitted" : "submitted";
