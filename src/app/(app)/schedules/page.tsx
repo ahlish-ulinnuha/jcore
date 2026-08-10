@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { allowedMenuKeysForRole, hasMenuAccess } from "@/lib/menu-access";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, ProfileMenuAccess, ShiftType, Store, StoreScheduleMonth, StoreStaffSchedule } from "@/lib/types";
+import type { Profile, ShiftType, Store, StoreScheduleMonth, StoreStaffSchedule } from "@/lib/types";
 import { approveMonthlySchedule, createStaffScheduleRequest, saveMonthlySchedule } from "./actions";
 import { ScheduleSubmitButton } from "./ScheduleSubmitButton";
 
@@ -258,27 +257,18 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
   if (!profile || profile.role === "vendor") redirect("/dashboard");
 
-  const { data: menuAccessRows } = await supabase
-    .from("profile_menu_access")
-    .select("*")
-    .eq("profile_id", profile.id)
-    .returns<ProfileMenuAccess[]>();
-  const allowedMenuKeys = allowedMenuKeysForRole(profile.role, menuAccessRows ?? []);
-  const canPickAnyStore = profile.role === "admin" || hasMenuAccess("input_schedule_all_store", allowedMenuKeys);
-  const isBuilderView = canPickAnyStore || hasMenuAccess("input_schedule", allowedMenuKeys);
-
   const params = await searchParams;
   const selectedMonth = params.month ?? currentMonthJakarta();
   const staffMonthSelectOptions = staffMonthOptions(selectedMonth);
   const monthDates = getMonthDates(selectedMonth);
   const weekGroups = getWeekGroups(selectedMonth);
   const selectedWeek = Math.min(Math.max(1, Number(params.week ?? 1) || 1), weekGroups.length || 1);
-  const editableDates = !isBuilderView ? monthDates : (weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7)).filter((date) => date.slice(0, 7) === selectedMonth);
-  const dates = !isBuilderView ? monthDates : weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7);
+  const editableDates = profile.role === "staff" ? monthDates : (weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7)).filter((date) => date.slice(0, 7) === selectedMonth);
+  const dates = profile.role === "staff" ? monthDates : weekGroups[selectedWeek - 1] ?? monthDates.slice(0, 7);
   const monthStart = monthDates[0];
   const monthEnd = monthDates[monthDates.length - 1];
-  const visibleScheduleStart = !isBuilderView ? weekGroups[0]?.[0] ?? monthStart : monthStart;
-  const visibleScheduleEnd = !isBuilderView ? weekGroups[weekGroups.length - 1]?.[6] ?? monthEnd : monthEnd;
+  const visibleScheduleStart = profile.role === "staff" ? weekGroups[0]?.[0] ?? monthStart : monthStart;
+  const visibleScheduleEnd = profile.role === "staff" ? weekGroups[weekGroups.length - 1]?.[6] ?? monthEnd : monthEnd;
   const monthHolidays = monthDates
     .map((date) => ({ date, name: indonesiaPublicHolidays[date] }))
     .filter((item): item is { date: string; name: string } => Boolean(item.name));
@@ -295,9 +285,9 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   ]);
   const stores = (allStores ?? []).filter((store) => store.name.trim().toLowerCase() !== "all store");
 
-  const selectedStoreId = !canPickAnyStore ? profile.store_id ?? "" : params.store ?? stores?.[0]?.id ?? "";
+  const selectedStoreId = profile.role === "staff" ? profile.store_id ?? "" : params.store ?? stores?.[0]?.id ?? "";
   const { data: staffRows } = selectedStoreId
-    ? !isBuilderView
+    ? profile.role === "staff"
       ? await supabase.from("profiles").select("*").eq("id", profile.id).returns<Profile[]>()
       : await supabase
           .from("profiles")
@@ -362,7 +352,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
   const scheduleMap = new Map((scheduleRows ?? []).map((row) => [`${row.staff_id}:${row.work_date}`, row]));
   const selectedStore = stores?.find((store) => store.id === selectedStoreId);
   const resetParams = new URLSearchParams();
-  if (!canPickAnyStore) {
+  if (profile.role === "staff") {
     if (selectedStoreId) resetParams.set("store", selectedStoreId);
   } else if (stores?.[0]?.id) {
     resetParams.set("store", stores[0].id);
@@ -428,7 +418,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
       ) : null}
       <section className="panel filter-panel">
         <form className="filter-grid">
-          {!canPickAnyStore ? (
+          {profile.role === "staff" ? (
             <input name="store" type="hidden" value={selectedStoreId} />
           ) : (
             <div className="field">
@@ -443,8 +433,8 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
             </div>
           )}
           <div className="field">
-            <label>{!isBuilderView ? "Pilih Bulan" : "Bulan"}</label>
-            {!isBuilderView ? (
+            <label>{profile.role === "staff" ? "Pilih Bulan" : "Bulan"}</label>
+            {profile.role === "staff" ? (
               <select className="month-picker-input" name="month" defaultValue={selectedMonth}>
                 {staffMonthSelectOptions.map((month) => (
                   <option key={month} value={month}>
@@ -456,7 +446,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
               <input name="month" type="month" defaultValue={selectedMonth} />
             )}
           </div>
-          {isBuilderView ? (
+          {profile.role === "admin" ? (
             <div className="field">
               <label>Minggu</label>
               <select name="week" defaultValue={selectedWeek}>
@@ -507,14 +497,14 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
       </section>
       <br/>
 
-      {isBuilderView ? <div className={`schedule-status ${scheduleMonth?.status ?? "draft"}`}>{statusLabel(scheduleMonth?.status)}</div> : null}
+      {profile.role === "admin" ? <div className={`schedule-status ${scheduleMonth?.status ?? "draft"}`}>{statusLabel(scheduleMonth?.status)}</div> : null}
       <section className="panel schedule-board-panel">
         <div className="page-head compact">
           <div>
             <p className="eyebrow"></p>
             <h2>
-              {!isBuilderView ? "My Schedule" : "Schedule"} {selectedMonth} - {!isBuilderView ? capitalizeWords(profile.full_name) : selectedStore?.name ?? profile.store_name ?? "Toko"}
-              {isBuilderView ? ` - Week ${selectedWeek}` : ""}
+              {profile.role === "staff" ? "My Schedule" : "Schedule"} {selectedMonth} - {profile.role === "staff" ? capitalizeWords(profile.full_name) : selectedStore?.name ?? profile.store_name ?? "Toko"}
+              {profile.role === "admin" ? ` - Week ${selectedWeek}` : ""}
             </h2>
           </div>
           {scheduleMonth && profile.role === "admin" ? (
@@ -530,7 +520,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
           ) : null}
         </div>
 
-        {staffRows?.length && isBuilderView ? (
+        {staffRows?.length && profile.role === "admin" ? (
           <form action={saveMonthlySchedule}>
             <input name="store_id" type="hidden" value={selectedStoreId} />
             <input name="schedule_month" type="hidden" value={scheduleMonthDate(selectedMonth)} />

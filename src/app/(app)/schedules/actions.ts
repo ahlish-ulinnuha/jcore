@@ -128,8 +128,9 @@ export async function saveMonthlySchedule(formData: FormData) {
   const weekNo = Number(text(formData, "week_no")) || null;
   const staffIds = values(formData, "staff_id");
   const dates = values(formData, "work_date");
+  const redirectBase = text(formData, "redirect_to") || "/schedules";
 
-  if (!storeId || !scheduleMonth) redirect("/schedules?error=missing-filter");
+  if (!storeId || !scheduleMonth) redirect(`${redirectBase}?error=missing-filter`);
   if (!canPickAnyStore && storeId !== profile.store_id) redirect("/dashboard");
 
   const schedule = await getOrCreateScheduleMonth(supabase, storeId, scheduleMonth, user.id);
@@ -244,8 +245,8 @@ export async function saveMonthlySchedule(formData: FormData) {
     week_no: weekNo,
   });
 
-  revalidatePath("/schedules");
-  redirect(`/schedules?store=${storeId}&month=${scheduleMonth.slice(0, 7)}${weekNo ? `&week=${weekNo}` : ""}&saved=1`);
+  revalidatePath(redirectBase);
+  redirect(`${redirectBase}?store=${storeId}&month=${scheduleMonth.slice(0, 7)}${weekNo ? `&week=${weekNo}` : ""}&saved=1`);
 }
 
 export async function approveMonthlySchedule(formData: FormData) {
