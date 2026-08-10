@@ -38,6 +38,14 @@ type SpiceSummaryRow = {
   whiteSpiceStock: number;
 };
 
+type SpiceRequestState = {
+  ambilDariJG2: boolean;
+  requestRed: string;
+  requestWhite: string;
+};
+
+const emptySpiceRequest: SpiceRequestState = { ambilDariJG2: false, requestRed: "", requestWhite: "" };
+
 function statusLabel(status: PurchaseRequestItem["status"]) {
   if (status === "fulfilled") return "Fulfilled";
   if (status === "unavailable") return "Unavailable";
@@ -87,6 +95,7 @@ export function DailyReportInteractive({
 }) {
   const [j2Keys, setJ2Keys] = useState<Set<string>>(new Set());
   const [slackNotes, setSlackNotes] = useState<Record<string, string>>({});
+  const [spiceRequests, setSpiceRequests] = useState<Record<string, SpiceRequestState>>({});
 
   function toggleJ2(rowKey: string) {
     setJ2Keys((current) => {
@@ -99,6 +108,13 @@ export function DailyReportInteractive({
 
   function updateSlackNote(rowKey: string, value: string) {
     setSlackNotes((current) => ({ ...current, [rowKey]: value }));
+  }
+
+  function updateSpiceRequest(storeName: string, patch: Partial<SpiceRequestState>) {
+    setSpiceRequests((current) => ({
+      ...current,
+      [storeName]: { ...emptySpiceRequest, ...current[storeName], ...patch },
+    }));
   }
 
   const summaryRows = batchGroups.flatMap((batchGroup) =>
@@ -121,6 +137,16 @@ export function DailyReportInteractive({
     ),
   );
 
+  const enrichedSpiceRows = spiceRows.map((row) => {
+    const request = spiceRequests[row.storeName];
+    return {
+      ...row,
+      ambilDariJG2: request?.ambilDariJG2 ?? false,
+      requestRed: request?.requestRed ?? "",
+      requestWhite: request?.requestWhite ?? "",
+    };
+  });
+
   return (
     <>
       <div className="filter-actions">
@@ -129,9 +155,69 @@ export function DailyReportInteractive({
           includeAllStoreTotal={includeAllStoreTotal}
           outletName={outletName}
           rows={summaryRows}
-          spiceRows={spiceRows}
+          spiceRows={enrichedSpiceRows}
         />
       </div>
+
+      {spiceRows.length > 0 ? (
+        <section className="panel daily-report-group">
+          <h2>Stock Bumbu</h2>
+          <div className="table-wrap compact-mobile-wrap">
+            <table className="compact-mobile-table report-item-table">
+              <thead>
+                <tr>
+                  <th>Store</th>
+                  <th>Stock Merah</th>
+                  <th>Stock Putih</th>
+                  <th>Request Bumbu Merah</th>
+                  <th>Request Bumbu Putih</th>
+                  <th>Ambil dari JG2</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...spiceRows]
+                  .sort((a, b) => a.storeName.localeCompare(b.storeName))
+                  .map((row) => {
+                    const request = spiceRequests[row.storeName] ?? emptySpiceRequest;
+                    return (
+                      <tr key={row.storeName}>
+                        <td>{row.storeName}</td>
+                        <td>{row.redSpiceStock}</td>
+                        <td>{row.whiteSpiceStock}</td>
+                        <td>
+                          <input
+                            aria-label={`Request Bumbu Merah ${row.storeName}`}
+                            onChange={(event) => updateSpiceRequest(row.storeName, { requestRed: event.target.value })}
+                            placeholder="Jika perlu"
+                            value={request.requestRed}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            aria-label={`Request Bumbu Putih ${row.storeName}`}
+                            onChange={(event) => updateSpiceRequest(row.storeName, { requestWhite: event.target.value })}
+                            placeholder="Jika perlu"
+                            value={request.requestWhite}
+                          />
+                        </td>
+                        <td>
+                          <label className="checkbox-line report-item-j2-toggle">
+                            <input
+                              checked={request.ambilDariJG2}
+                              onChange={(event) => updateSpiceRequest(row.storeName, { ambilDariJG2: event.target.checked })}
+                              type="checkbox"
+                            />
+                            Ambil dari JG2
+                          </label>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {batchGroups.map((batchGroup) => (
         <section className="panel daily-report-group" key={batchGroup.batchNo}>
