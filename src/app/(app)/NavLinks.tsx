@@ -9,6 +9,7 @@ import type { Role } from "@/lib/types";
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
   if (href === "/requests/new") return pathname.startsWith("/requests");
+  if (href === "/schedules") return pathname === href;
   return pathname.startsWith(href);
 }
 
@@ -23,6 +24,7 @@ const adminReportMenu = [
 const operationalMenu = [
   { key: "attendance", label: "Absensi" },
   { key: "schedules", label: "Schedule", staffLabel: "My Schedule" },
+  { key: "input_schedule", label: "Input Schedule" },
   { key: "all_schedules", label: "All Schedule" },
   { key: "schedule_requests", label: "Request Schedule" },
   { adminOnly: true, key: "overtime_summary", label: "Overtime Summary" },
@@ -30,7 +32,7 @@ const operationalMenu = [
 
 // Capability-only keys: not real pages, just permission toggles for features inside other pages.
 // Must be excluded from nav rendering since their href isn't a navigable route.
-const hiddenCapabilityKeys = ["send_vendor_message"];
+const hiddenCapabilityKeys = ["send_vendor_message", "input_schedule_all_store"];
 
 export function NavLinks({ allowedMenuKeys, role }: { allowedMenuKeys: string[]; role: Role }) {
   const pathname = usePathname();

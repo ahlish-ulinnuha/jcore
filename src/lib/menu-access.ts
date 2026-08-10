@@ -9,12 +9,14 @@ export const mainMenuItems = [
   { href: "/shopping", key: "shopping", label: "Belanja", roles: ["admin", "staff"] },
   { href: "/attendance", key: "attendance", label: "Absensi", roles: ["admin", "staff"] },
   { href: "/schedules", key: "schedules", label: "Schedule", roles: ["admin", "staff"] },
+  { href: "/schedules/input", key: "input_schedule", label: "Input Schedule", roles: ["admin"] },
   { href: "/schedules/all", key: "all_schedules", label: "All Schedule", roles: ["admin"] },
   { href: "/schedules/requests", key: "schedule_requests", label: "Request Schedule", roles: ["admin"] },
   { href: "/overtime-summary", key: "overtime_summary", label: "Overtime Summary", roles: ["admin"] },
   { href: "/admin/vendor", key: "admin_vendor", label: "Vendor", roles: ["admin"] },
   { href: "/vendor", key: "vendor_portal", label: "Vendor", roles: ["vendor"] },
   { href: "/capabilities/send_vendor_message", key: "send_vendor_message", label: "Kirim Pesan Vendor (WhatsApp)", roles: ["admin"] },
+  { href: "/capabilities/input_schedule_all_store", key: "input_schedule_all_store", label: "Input Schedule - Semua Store (butuh akses Input Schedule)", roles: ["admin"] },
 ] as const;
 
 export const masterMenuItems = [
