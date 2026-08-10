@@ -8,13 +8,17 @@ type SummaryRow = {
   note?: string;
   productName: string;
   qty: number;
+  rawLine?: string;
   storeNames?: string[];
   unit?: string;
   vendorName: string;
 };
 
 type SpiceSummaryRow = {
+  ambilDariJG2?: boolean;
   redSpiceStock: number;
+  requestRed?: string;
+  requestWhite?: string;
   storeName: string;
   whiteSpiceStock: number;
 };
@@ -66,10 +70,12 @@ export function CopySummaryButton({
         const lines = groupRows
           .sort((a, b) => a.productName.localeCompare(b.productName))
           .map((row) => {
+            if (row.rawLine) return `- ${row.rawLine}`;
             const storeNames = shouldShowStoreNames(row.vendorName) ? [...(row.storeNames ?? [])].sort().join(" ") : "";
             const productName = storeNames ? `${row.productName} ${storeNames}` : row.productName;
             const unit = row.unit?.trim();
-            return `- ${productName} / ${row.qty}${unit ? ` ${unit}` : ""}`;
+            const note = row.note?.trim();
+            return `- ${productName} / ${row.qty}${unit ? ` ${unit}` : ""}${note ? ` - ${note}` : ""}`;
           });
         return [`Request ${groupName}`, ...lines].join("\n");
       });
@@ -77,18 +83,24 @@ export function CopySummaryButton({
     const sortedSpiceRows = includeSpiceStock ? [...(spiceRows ?? [])].sort((a, b) => a.storeName.localeCompare(b.storeName)) : [];
     const totalRedSpice = sortedSpiceRows.reduce((total, row) => total + row.redSpiceStock, 0);
     const totalWhiteSpice = sortedSpiceRows.reduce((total, row) => total + row.whiteSpiceStock, 0);
+    const spiceLines = sortedSpiceRows.flatMap((row) => {
+      const stockLine = `- ${row.storeName}: merah ${formatQty(row.redSpiceStock)}, putih ${formatQty(row.whiteSpiceStock)}`;
+      const requestRed = row.requestRed?.trim();
+      const requestWhite = row.requestWhite?.trim();
+      if (!requestRed && !requestWhite) return [stockLine];
+      if (row.ambilDariJG2) return [stockLine];
+      const requestParts = [requestRed ? `merah ${requestRed}` : "", requestWhite ? `putih ${requestWhite}` : ""].filter(Boolean).join(", ");
+      const requestLine = `  Request: ${requestParts}`;
+      return [stockLine, requestLine];
+    });
     const spiceSection = sortedSpiceRows.length
       ? [
           "Stock Bumbu",
-          ...sortedSpiceRows.map((row) => `- ${row.storeName}: merah ${formatQty(row.redSpiceStock)}, putih ${formatQty(row.whiteSpiceStock)}`),
+          ...spiceLines,
           ...(includeAllStoreTotal ? [`- All store: merah ${formatQty(totalRedSpice)}, putih ${formatQty(totalWhiteSpice)}`] : []),
         ].join("\n")
       : "";
-    const notedRows = rows.filter((row) => row.note?.trim());
-    const noteSection = notedRows.length
-      ? ["Catatan", ...notedRows.map((row) => `- ${row.productName}: ${row.note?.trim()}`)].join("\n")
-      : "";
-    const allSections = [...sections, spiceSection, noteSection].filter(Boolean);
+    const allSections = [...sections, spiceSection].filter(Boolean);
     return [`*_📋✨ Summary Request ${formatDate(activeDate)}_*`, `Outlet: ${outletName}`, ...allSections].join("\n------------------------------ \n");
   }
 

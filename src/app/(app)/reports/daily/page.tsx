@@ -40,6 +40,14 @@ function todayJakarta() {
   }).format(new Date());
 }
 
+function previousDay(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
 function displayDate(value: string) {
   const [year, month, day] = value.split("-");
   if (!year || !month || !day) return value;
@@ -114,7 +122,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
 
   const params = await searchParams;
   const date = params.date ?? todayJakarta();
-  const spiceReportDate = todayJakarta();
+  const spiceReportDate = previousDay(date);
   const selectedVendor = params.vendor ?? "all";
   const selectedStatus = params.status ?? "all";
   const selectedRequestStatus = profile.role === "admin" ? params.request_status ?? "submitted" : "submitted";

@@ -38,9 +38,13 @@ type SpiceSummaryRow = {
   whiteSpiceStock: number;
 };
 
-function shouldShowStoreNames(vendorName: string) {
-  return vendorName.trim().toUpperCase() !== "NR";
-}
+type SpiceRequestState = {
+  ambilDariJG2: boolean;
+  requestRed: string;
+  requestWhite: string;
+};
+
+const emptySpiceRequest: SpiceRequestState = { ambilDariJG2: false, requestRed: "", requestWhite: "" };
 
 function statusLabel(status: PurchaseRequestItem["status"]) {
   if (status === "fulfilled") return "Fulfilled";
@@ -90,6 +94,8 @@ export function DailyReportInteractive({
   spiceRows: SpiceSummaryRow[];
 }) {
   const [j2Keys, setJ2Keys] = useState<Set<string>>(new Set());
+  const [slackNotes, setSlackNotes] = useState<Record<string, string>>({});
+  const [spiceRequests, setSpiceRequests] = useState<Record<string, SpiceRequestState>>({});
 
   function toggleJ2(rowKey: string) {
     setJ2Keys((current) => {
@@ -100,19 +106,64 @@ export function DailyReportInteractive({
     });
   }
 
+  function updateSlackNote(rowKey: string, value: string) {
+    setSlackNotes((current) => ({ ...current, [rowKey]: value }));
+  }
+
+  function updateSpiceRequest(storeName: string, patch: Partial<SpiceRequestState>) {
+    setSpiceRequests((current) => ({
+      ...current,
+      [storeName]: { ...emptySpiceRequest, ...current[storeName], ...patch },
+    }));
+  }
+
   const summaryRows = batchGroups.flatMap((batchGroup) =>
     batchGroup.vendors.flatMap((vendor) =>
-      vendor.rows.map((row) => ({
-        groupOverride: j2Keys.has(row.rowKey) ? "J2" : undefined,
-        note: isAdmin && row.itemNotes.length > 0 ? row.itemNotes.join("; ") : undefined,
-        productName: row.summaryProductName,
-        qty: row.qty,
-        storeNames: row.storeNames,
-        unit: row.unit,
-        vendorName: row.vendorName,
-      })),
+      vendor.rows.map((row) => {
+        const notes = [
+          isAdmin && row.itemNotes.length > 0 ? row.itemNotes.join("; ") : "",
+          slackNotes[row.rowKey]?.trim() ?? "",
+        ].filter(Boolean);
+        return {
+          groupOverride: j2Keys.has(row.rowKey) ? "ambil dari J2" : undefined,
+          note: notes.length > 0 ? notes.join("; ") : undefined,
+          productName: row.summaryProductName,
+          qty: row.qty,
+          storeNames: row.storeNames,
+          unit: row.unit,
+          vendorName: row.vendorName,
+        };
+      }),
     ),
   );
+
+  const spiceJ2Rows = spiceRows.flatMap((row) => {
+    const request = spiceRequests[row.storeName];
+    if (!request?.ambilDariJG2) return [];
+    const requestRed = request.requestRed?.trim();
+    const requestWhite = request.requestWhite?.trim();
+    if (!requestRed && !requestWhite) return [];
+    const requestParts = [requestRed ? `merah ${requestRed}` : "", requestWhite ? `putih ${requestWhite}` : ""].filter(Boolean).join(", ");
+    return [
+      {
+        groupOverride: "ambil dari J2",
+        productName: `Bumbu ${row.storeName}`,
+        qty: 0,
+        rawLine: `Bumbu ${row.storeName} / ${requestParts}`,
+        vendorName: "Bumbu",
+      },
+    ];
+  });
+
+  const enrichedSpiceRows = spiceRows.map((row) => {
+    const request = spiceRequests[row.storeName];
+    return {
+      ...row,
+      ambilDariJG2: request?.ambilDariJG2 ?? false,
+      requestRed: request?.requestRed ?? "",
+      requestWhite: request?.requestWhite ?? "",
+    };
+  });
 
   return (
     <>
@@ -121,10 +172,70 @@ export function DailyReportInteractive({
           date={date}
           includeAllStoreTotal={includeAllStoreTotal}
           outletName={outletName}
-          rows={summaryRows}
-          spiceRows={spiceRows}
+          rows={[...summaryRows, ...spiceJ2Rows]}
+          spiceRows={enrichedSpiceRows}
         />
       </div>
+
+      {spiceRows.length > 0 ? (
+        <section className="panel daily-report-group">
+          <h2>Stock Bumbu</h2>
+          <div className="table-wrap compact-mobile-wrap">
+            <table className="compact-mobile-table report-item-table">
+              <thead>
+                <tr>
+                  <th>Store</th>
+                  <th>Stock Merah</th>
+                  <th>Stock Putih</th>
+                  <th>Request Bumbu Merah</th>
+                  <th>Request Bumbu Putih</th>
+                  <th>Ambil dari JG2</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...spiceRows]
+                  .sort((a, b) => a.storeName.localeCompare(b.storeName))
+                  .map((row) => {
+                    const request = spiceRequests[row.storeName] ?? emptySpiceRequest;
+                    return (
+                      <tr key={row.storeName}>
+                        <td>{row.storeName}</td>
+                        <td>{row.redSpiceStock}</td>
+                        <td>{row.whiteSpiceStock}</td>
+                        <td>
+                          <input
+                            aria-label={`Request Bumbu Merah ${row.storeName}`}
+                            onChange={(event) => updateSpiceRequest(row.storeName, { requestRed: event.target.value })}
+                            placeholder="Jika perlu"
+                            value={request.requestRed}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            aria-label={`Request Bumbu Putih ${row.storeName}`}
+                            onChange={(event) => updateSpiceRequest(row.storeName, { requestWhite: event.target.value })}
+                            placeholder="Jika perlu"
+                            value={request.requestWhite}
+                          />
+                        </td>
+                        <td>
+                          <label className="checkbox-line report-item-j2-toggle">
+                            <input
+                              checked={request.ambilDariJG2}
+                              onChange={(event) => updateSpiceRequest(row.storeName, { ambilDariJG2: event.target.checked })}
+                              type="checkbox"
+                            />
+                            Ambil dari JG2
+                          </label>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {batchGroups.map((batchGroup) => (
         <section className="panel daily-report-group" key={batchGroup.batchNo}>
@@ -151,9 +262,9 @@ export function DailyReportInteractive({
                       <tr>
                         <th>Barang</th>
                         <th>Store</th>
-                        {isAdmin ? <th>Catatan</th> : null}
                         <th>Qty</th>
                         <th>Ambil dari J2</th>
+                        <th>Catatan Slack</th>
                         <th>Status</th>
                         {isAdmin ? <th>Last Request</th> : null}
                       </tr>
@@ -162,14 +273,21 @@ export function DailyReportInteractive({
                       {vendor.rows.map((row) => (
                         <tr key={row.rowKey}>
                           <td>{row.productName}</td>
-                          <td>{shouldShowStoreNames(row.vendorName) ? [...row.storeNames].sort().join(", ") : "-"}</td>
-                          {isAdmin ? <td>{row.itemNotes.length > 0 ? row.itemNotes.join("; ") : "-"}</td> : null}
+                          <td>{row.storeNames.length > 0 ? [...row.storeNames].sort().join(", ") : "-"}</td>
                           <td>{row.qty}</td>
                           <td>
                             <label className="checkbox-line report-item-j2-toggle">
                               <input checked={j2Keys.has(row.rowKey)} onChange={() => toggleJ2(row.rowKey)} type="checkbox" />
                               Ambil dari J2
                             </label>
+                          </td>
+                          <td>
+                            <input
+                              aria-label={`Catatan Slack ${row.productName}`}
+                              onChange={(event) => updateSlackNote(row.rowKey, event.target.value)}
+                              placeholder="Catatan (opsional)"
+                              value={slackNotes[row.rowKey] ?? ""}
+                            />
                           </td>
                           <td>
                             <span
