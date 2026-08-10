@@ -103,7 +103,7 @@ export function DailyReportInteractive({
   const summaryRows = batchGroups.flatMap((batchGroup) =>
     batchGroup.vendors.flatMap((vendor) =>
       vendor.rows.map((row) => ({
-        groupOverride: j2Keys.has(row.rowKey) ? "J2" : undefined,
+        groupOverride: j2Keys.has(row.rowKey) ? "ambil dari J2" : undefined,
         note: isAdmin && row.itemNotes.length > 0 ? row.itemNotes.join("; ") : undefined,
         productName: row.summaryProductName,
         qty: row.qty,
