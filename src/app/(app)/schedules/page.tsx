@@ -397,7 +397,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Se
       {params.reviewed === "1" ? <div className="toast submit">Request schedule berhasil diproses.</div> : null}
       {params.error === "missing-filter" ? <div className="toast delete">Store dan bulan wajib dipilih.</div> : null}
 
-      {isBuilderView ? (
+      {profile.role === "admin" ? (
         <>
           <section className="panel schedule-shift-panel">
             <div className="table-wrap compact-mobile-wrap">
