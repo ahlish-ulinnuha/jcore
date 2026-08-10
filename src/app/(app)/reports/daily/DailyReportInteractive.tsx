@@ -244,7 +244,6 @@ export function DailyReportInteractive({
                       <tr>
                         <th>Barang</th>
                         <th>Store</th>
-                        {isAdmin ? <th>Catatan</th> : null}
                         <th>Qty</th>
                         <th>Ambil dari J2</th>
                         <th>Catatan Slack</th>
@@ -257,7 +256,6 @@ export function DailyReportInteractive({
                         <tr key={row.rowKey}>
                           <td>{row.productName}</td>
                           <td>{row.storeNames.length > 0 ? [...row.storeNames].sort().join(", ") : "-"}</td>
-                          {isAdmin ? <td>{row.itemNotes.length > 0 ? row.itemNotes.join("; ") : "-"}</td> : null}
                           <td>{row.qty}</td>
                           <td>
                             <label className="checkbox-line report-item-j2-toggle">
