@@ -86,6 +86,7 @@ export function DailyReportInteractive({
   spiceRows: SpiceSummaryRow[];
 }) {
   const [j2Keys, setJ2Keys] = useState<Set<string>>(new Set());
+  const [slackNotes, setSlackNotes] = useState<Record<string, string>>({});
 
   function toggleJ2(rowKey: string) {
     setJ2Keys((current) => {
@@ -96,17 +97,27 @@ export function DailyReportInteractive({
     });
   }
 
+  function updateSlackNote(rowKey: string, value: string) {
+    setSlackNotes((current) => ({ ...current, [rowKey]: value }));
+  }
+
   const summaryRows = batchGroups.flatMap((batchGroup) =>
     batchGroup.vendors.flatMap((vendor) =>
-      vendor.rows.map((row) => ({
-        groupOverride: j2Keys.has(row.rowKey) ? "ambil dari J2" : undefined,
-        note: isAdmin && row.itemNotes.length > 0 ? row.itemNotes.join("; ") : undefined,
-        productName: row.summaryProductName,
-        qty: row.qty,
-        storeNames: row.storeNames,
-        unit: row.unit,
-        vendorName: row.vendorName,
-      })),
+      vendor.rows.map((row) => {
+        const notes = [
+          isAdmin && row.itemNotes.length > 0 ? row.itemNotes.join("; ") : "",
+          slackNotes[row.rowKey]?.trim() ?? "",
+        ].filter(Boolean);
+        return {
+          groupOverride: j2Keys.has(row.rowKey) ? "ambil dari J2" : undefined,
+          note: notes.length > 0 ? notes.join("; ") : undefined,
+          productName: row.summaryProductName,
+          qty: row.qty,
+          storeNames: row.storeNames,
+          unit: row.unit,
+          vendorName: row.vendorName,
+        };
+      }),
     ),
   );
 
@@ -150,6 +161,7 @@ export function DailyReportInteractive({
                         {isAdmin ? <th>Catatan</th> : null}
                         <th>Qty</th>
                         <th>Ambil dari J2</th>
+                        <th>Catatan Slack</th>
                         <th>Status</th>
                         {isAdmin ? <th>Last Request</th> : null}
                       </tr>
@@ -166,6 +178,14 @@ export function DailyReportInteractive({
                               <input checked={j2Keys.has(row.rowKey)} onChange={() => toggleJ2(row.rowKey)} type="checkbox" />
                               Ambil dari J2
                             </label>
+                          </td>
+                          <td>
+                            <input
+                              aria-label={`Catatan Slack ${row.productName}`}
+                              onChange={(event) => updateSlackNote(row.rowKey, event.target.value)}
+                              placeholder="Catatan (opsional)"
+                              value={slackNotes[row.rowKey] ?? ""}
+                            />
                           </td>
                           <td>
                             <span
