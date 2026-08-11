@@ -64,7 +64,7 @@ export async function GET(request: Request) {
 
   const message = [
     `Belanja harian tanggal ${dateLabel} belum diinput.`,
-    "Mohon segera diinput melalui menu Belanja.",
+    "Mohon segera diinput melalui menu Report Belanja.",
   ].join("\n");
 
   const result = await sendWhatsappMessageTo(targets.join(","), message);
