@@ -370,7 +370,7 @@ export function NewRequestForm({
   }
 
   return (
-    <form className="form panel" onSubmit={saveRequest}>
+    <form className="form panel" method="post" onSubmit={saveRequest}>
       {toast ? <div className={`toast ${toast.tone}`}>{toast.text}</div> : null}
       {message ? <div className="alert">{message}</div> : null}
       <div className="grid cols-3">
