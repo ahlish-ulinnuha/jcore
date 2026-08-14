@@ -63,6 +63,12 @@ export function NavigationLoading() {
     return () => document.removeEventListener("submit", onSubmit);
   }, []);
 
+  useEffect(() => {
+    const onFormLoadingDone = () => setLoading(false);
+    window.addEventListener("app:form-loading-done", onFormLoadingDone);
+    return () => window.removeEventListener("app:form-loading-done", onFormLoadingDone);
+  }, []);
+
   return (
     <>
       {loading ? (

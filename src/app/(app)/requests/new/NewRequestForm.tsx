@@ -180,6 +180,11 @@ export function NewRequestForm({
     setToast(nextToast);
   }
 
+  function stopSaving() {
+    setSaving(false);
+    window.dispatchEvent(new Event("app:form-loading-done"));
+  }
+
   function queueToast(nextToast: Toast) {
     sessionStorage.setItem("request-toast", JSON.stringify(nextToast));
   }
@@ -245,14 +250,14 @@ export function NewRequestForm({
     const unmappedItem = selectedItems.find((item) => !item.vendorId);
     if (unmappedItem) {
       setMessage("Barang yang dipilih belum memiliki mapping vendor. Mohon admin lengkapi mapping barang ke vendor.");
-      setSaving(false);
+      stopSaving();
       return;
     }
 
     const validItems = selectedItems.filter((item) => item.vendorId);
     if (validItems.length === 0) {
       setMessage("Minimal isi satu item request.");
-      setSaving(false);
+      stopSaving();
       return;
     }
 
@@ -287,7 +292,7 @@ export function NewRequestForm({
         requestError?.message ??
           "Draft ini sudah diubah user lain. Refresh halaman dulu supaya data terbaru tidak tertimpa.",
       );
-      setSaving(false);
+      stopSaving();
       return;
     }
 
@@ -295,7 +300,7 @@ export function NewRequestForm({
       const { error: deleteError } = await supabase.from("purchase_request_items").delete().eq("request_id", activeRequest.id);
       if (deleteError) {
         setMessage(deleteError.message);
-        setSaving(false);
+        stopSaving();
         return;
       }
     }
@@ -370,7 +375,7 @@ export function NewRequestForm({
   }
 
   return (
-    <form className="form panel" method="post" onSubmit={saveRequest}>
+    <form className="form panel" onSubmit={saveRequest}>
       {toast ? <div className={`toast ${toast.tone}`}>{toast.text}</div> : null}
       {message ? <div className="alert">{message}</div> : null}
       <div className="grid cols-3">
