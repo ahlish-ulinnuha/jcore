@@ -316,7 +316,7 @@ export function NewRequestForm({
       })),
     );
 
-    setSaving(false);
+    stopSaving();
 
     if (itemError) {
       setMessage(itemError.message);
