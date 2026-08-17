@@ -13,6 +13,7 @@ type InteractiveRow = {
   qty: number;
   rowKey: string;
   status: PurchaseRequestItem["status"];
+  storeIds: string[];
   storeNames: string[];
   summaryProductName: string;
   unit: string;
@@ -67,9 +68,15 @@ function displayDate(value: string) {
   return `${day}-${month}-${year}`;
 }
 
-function lastRequestLabel(productId: string, lastRequestByProductId: Record<string, string>) {
-  const value = lastRequestByProductId[productId];
-  return value ? displayDate(value) : "-";
+function lastRequestLabel(row: InteractiveRow, lastRequestByStoreProduct: Record<string, string>) {
+  if (row.storeIds.length === 0) return "-";
+  return row.storeIds
+    .map((storeId, index) => {
+      const value = lastRequestByStoreProduct[`${storeId}|${row.productId}`];
+      const storeName = row.storeNames[index] ?? storeId;
+      return `${storeName}: ${value ? displayDate(value) : "-"}`;
+    })
+    .join(", ");
 }
 
 export function DailyReportInteractive({
@@ -78,7 +85,7 @@ export function DailyReportInteractive({
   date,
   includeAllStoreTotal,
   isAdmin,
-  lastRequestByProductId,
+  lastRequestByStoreProduct,
   outletName,
   requestDateLabel,
   spiceRows,
@@ -88,7 +95,7 @@ export function DailyReportInteractive({
   date: string;
   includeAllStoreTotal: boolean;
   isAdmin: boolean;
-  lastRequestByProductId: Record<string, string>;
+  lastRequestByStoreProduct: Record<string, string>;
   outletName: string;
   requestDateLabel: string;
   spiceRows: SpiceSummaryRow[];
@@ -299,7 +306,7 @@ export function DailyReportInteractive({
                               {statusIcon(row.status)}
                             </span>
                           </td>
-                          {isAdmin ? <td>{lastRequestLabel(row.productId, lastRequestByProductId)}</td> : null}
+                          {isAdmin ? <td>{lastRequestLabel(row, lastRequestByStoreProduct)}</td> : null}
                         </tr>
                       ))}
                     </tbody>

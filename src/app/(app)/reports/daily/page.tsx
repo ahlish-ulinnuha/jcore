@@ -26,6 +26,7 @@ type ReportRow = {
   summaryProductName: string;
   qty: number;
   storeNames: string[];
+  storeIds: string[];
   itemNotes: string[];
   unit: string;
   status: PurchaseRequestItem["status"];
@@ -176,24 +177,26 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
     .limit(50)
     .returns<VendorMessageLog[]>();
 
-  const lastRequestByProductId = new Map<string, string>();
+  const lastRequestByStoreProduct = new Map<string, string>();
   if (profile.role === "admin") {
     const productIds = Array.from(new Set((items ?? []).map((item) => item.product_id)));
     if (productIds.length > 0) {
       const { data: previousItems } = await supabase
         .from("purchase_request_items")
-        .select("product_id, purchase_requests!inner(request_date, status)")
+        .select("product_id, purchase_requests!inner(request_date, status, store_id)")
         .in("product_id", productIds)
         .eq("purchase_requests.status", "submitted")
         .lt("purchase_requests.request_date", date)
-        .returns<{ product_id: string; purchase_requests?: { request_date?: string } }[]>();
+        .returns<{ product_id: string; purchase_requests?: { request_date?: string; store_id?: string | null } }[]>();
 
       for (const row of previousItems ?? []) {
         const requestDate = row.purchase_requests?.request_date;
-        if (!requestDate) continue;
-        const current = lastRequestByProductId.get(row.product_id);
+        const storeId = row.purchase_requests?.store_id;
+        if (!requestDate || !storeId) continue;
+        const key = `${storeId}|${row.product_id}`;
+        const current = lastRequestByStoreProduct.get(key);
         if (!current || requestDate > current) {
-          lastRequestByProductId.set(row.product_id, requestDate);
+          lastRequestByStoreProduct.set(key, requestDate);
         }
       }
     }
@@ -228,6 +231,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         summaryProductName: summaryProductName(item),
         qty: 0,
         storeNames: [],
+        storeIds: [],
         itemNotes: [],
         unit: item.unit,
         status: item.status,
@@ -236,6 +240,10 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
       const storeName = item.purchase_requests?.store_name?.trim();
       if (storeName && !acc[key].storeNames.includes(storeName)) {
         acc[key].storeNames.push(storeName);
+      }
+      const storeId = item.purchase_requests?.store_id;
+      if (storeId && !acc[key].storeIds.includes(storeId)) {
+        acc[key].storeIds.push(storeId);
       }
       const itemNote = item.item_note?.trim();
       if (itemNote && !acc[key].itemNotes.includes(itemNote)) {
@@ -273,6 +281,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         qty: row.qty,
         rowKey: `${row.batchNo}-${row.vendorId}-${row.productId}-${row.status}`,
         status: row.status,
+        storeIds: row.storeIds,
         storeNames: row.storeNames,
         summaryProductName: row.summaryProductName,
         unit: row.unit,
@@ -381,7 +390,7 @@ export default async function DailyReportPage({ searchParams }: { searchParams: 
         date={date}
         includeAllStoreTotal={profile.role === "admin"}
         isAdmin={profile.role === "admin"}
-        lastRequestByProductId={Object.fromEntries(lastRequestByProductId)}
+        lastRequestByStoreProduct={Object.fromEntries(lastRequestByStoreProduct)}
         outletName={selectedStoreName}
         requestDateLabel={requestDateLabel}
         spiceRows={(spiceReports ?? []).map((report) => ({
