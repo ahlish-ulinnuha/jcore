@@ -40,6 +40,7 @@ type SearchParams = Promise<{
 }>;
 
 type ShoppingSheetRow = {
+  byName: string;
   description: string;
   id: string;
   kategori: string;
@@ -144,6 +145,7 @@ async function fetchShoppingRows(supabase: Awaited<ReturnType<typeof createClien
   }
 
   const rows: ShoppingSheetRow[] = (data ?? []).map((record) => ({
+    byName: record.by_name ?? "",
     description: record.description,
     id: record.id,
     kategori: record.category,
@@ -596,6 +598,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
               <thead>
                 <tr>
                   <th>Tanggal</th>
+                  <th>By</th>
                   <th>Deskripsi</th>
                   <th>Nominal</th>
                   <th>Kategori</th>
@@ -609,6 +612,7 @@ export default async function ShoppingRecordPage({ searchParams }: { searchParam
                 {paginatedHistoryRows.map((row) => (
                   <tr key={row.id}>
                     <td>{formatDisplayDate(row.tanggal)}</td>
+                    <td>{row.byName || "-"}</td>
                     <td>{row.description || "-"}</td>
                     <td>{formatRupiah(row.nominal)}</td>
                     <td>{row.kategori || "-"}</td>
