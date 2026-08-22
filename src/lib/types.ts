@@ -294,6 +294,7 @@ export type ShoppingRecord = {
   payment_method: string;
   payment_status: "paid" | "unpaid";
   notes: string | null;
+  by_name: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

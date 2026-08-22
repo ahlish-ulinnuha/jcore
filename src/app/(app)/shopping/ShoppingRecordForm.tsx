@@ -69,6 +69,14 @@ export function ShoppingRecordForm({
         </>
       )}
       <div className="field">
+        <label>By</label>
+        <input
+          defaultValue={editingRecord?.by_name ?? profile.full_name ?? ""}
+          name="by_name"
+          placeholder="Nama yang belanja"
+        />
+      </div>
+      <div className="field">
         <label>Deskripsi</label>
         <input defaultValue={editingRecord?.description ?? ""} name="description" placeholder="Contoh: mekar" required />
       </div>
